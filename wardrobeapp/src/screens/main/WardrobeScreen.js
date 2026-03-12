@@ -101,10 +101,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chip: {
-    height: 36,
+    height: 42,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-
+    textAlign: 'center',
     borderRadius: radius.full,
     backgroundColor: colors.inputBg,
     borderWidth: 1,
