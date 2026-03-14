@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import {View, Text, TouchableOpacity, StyleSheet,Image, Alert,} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet,Image, Alert,ActivityIndicator} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius } from '../../theme';
+import { uploadClothingItem } from '../../backend/uploadPipeline';
 
+const MOCK_USER_ID = 'user-1'
 export default function UploadScreen({ navigation }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [cameraVisible, setCameraVisible] = useState(true); 
+  const [isUploading, setIsUploading] = useState(false);
+  const [progressMessage,setProgressMessage] = useState('')
 
   const openGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -46,7 +50,35 @@ export default function UploadScreen({ navigation }) {
   const handleDiscard = () => {
     setSelectedImage(null);
     setCameraVisible(true);
+    setProgressMessage('')
   };
+
+  const handleUpload = async() => {
+    if (!selectedImage) return
+    setIsUploading(true)
+    const {item, error} = await uploadClothingItem(
+      selectedImage,
+      MOCK_USER_ID,
+      (msg) => setProgressMessage(msg)
+    )
+  
+    setIsUploading(false)
+    if(error){
+      Alert.alert('Upload failed', error)
+      return
+    }
+    Alert.alert(
+      'Added to Wardrobe!',
+      'Category: PENDING',
+      [{text: 'OK', onPress: () => {
+        handleDiscard();
+        navigation.navigate('Wardrobe')
+      }}]
+    )
+  }
+
+  
+  
 
   if (cameraVisible && !selectedImage) {
     return (
@@ -76,22 +108,27 @@ export default function UploadScreen({ navigation }) {
 
   return (
     <View style={styles.previewScreen}>
-      <Image source={{ uri: selectedImage }} style={styles.previewImage} resizeMode="cover" />
+      <View style={styles.imageContainer}>
+        <Image source={{uri: selectedImage}} style={styles.previewImage} resizeMode="contain"/>
+      </View>
 
+      {isUploading && (
+        <View style = {styles.uploadingOverlay}>
+          <ActivityIndicator size='large' color='#fff'/>
+          <Text style={styles.uploadingText}>{progressMessage}</Text>
+        </View>
+      )}
       <View style={styles.previewActions}>
-        <TouchableOpacity style={styles.discardBtn} onPress={handleDiscard}>
+        <TouchableOpacity style={styles.discardBtn} onPress={handleDiscard} disabled={isUploading}>
           <Text style={styles.discardText}>Retake</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.saveBtn}
-          onPress={() => {
-            // send to backend and store in wardrobe
-            Alert.alert('Saved!', 'Item added to your wardrobe.');
-            handleDiscard();
-          }}
+          style={[styles.saveBtn, isUploading && {opacity: 0.6}]}
+          onPress={handleUpload}
+          disabled={isUploading}
         >
-          <Text style={styles.saveText}>Add to Wardrobe</Text>
+          <Text style={styles.saveText}>{isUploading ? 'Processing...' : 'Add to Wardrobe'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -141,19 +178,41 @@ const styles = StyleSheet.create({
     borderRadius: 29,
     backgroundColor: '#fff',
   },
-
   previewScreen: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+  },
+  imageContainer: {
+    height: 420,
+    backgroundColor: colors.inputBg,
+    marginTop: spacing.xl,
+    marginHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    overflow: 'hidden',
   },
   previewImage: {
-    flex: 1,
+    width:'100%',
+    height: '100%',
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  uploadingText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
   },
   previewActions: {
     flexDirection: 'row',
     padding: spacing.lg,
     gap: spacing.md,
-    backgroundColor: '#000',
+    marginTop: spacing.lg,
+    backgroundColor: colors.background,
   },
   discardBtn: {
     flex: 1,
@@ -163,7 +222,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fff',
   },
-  discardText: { color: '#fff', fontSize: 15 },
+  discardText: { color: colors.textDark, fontSize: 15 },
   saveBtn: {
     flex: 2,
     paddingVertical: spacing.md,
