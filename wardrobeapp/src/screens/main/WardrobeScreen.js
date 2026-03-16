@@ -5,13 +5,15 @@ import ClothingCard from '../../components/ClothingCard';
 import { colors, spacing, radius } from '../../theme';
 import {useFocusEffect} from '@react-navigation/native';
 import { getAllClothingItems, toggleFavorite, deleteClothingItem } from '../../backend/wardrobeService';
+import { useAuth } from '../../backend/useAuth';
 
 
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Accessories'];
 
-const MOCK_USER_ID = '34f19f18-0889-4773-b27c-6bada8f795c4'
+// const MOCK_USER_ID = '34f19f18-0889-4773-b27c-6bada8f795c4'
 
 export default function WardrobeScreen() {
+  const {user} = useAuth()
   const [activeCategory, setActiveCategory] = useState('All');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,12 +21,13 @@ export default function WardrobeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadItems()
-    },[])
+    },[user])
   )
 
   const loadItems = async () => {
+    if(!user?.id) return
     setLoading(true)
-    const {items: fetchedItems, error} = await getAllClothingItems(MOCK_USER_ID)
+    const {items: fetchedItems, error} = await getAllClothingItems(user?.id)
     if (!error){
       setItems(fetchedItems)
     } 
@@ -43,7 +46,7 @@ export default function WardrobeScreen() {
         prev.map(i => i.id === id? {...i, is_favorite: item.is_favorite} : i)
       )
     }
-  };
+  }
 
   const handleDelete = async (id) => {
     const { error } = await deleteClothingItem(id);
@@ -63,7 +66,7 @@ export default function WardrobeScreen() {
         onAddToMixer={() => console.log('Add to mixer:', item.id)}
       />
     </View>
-  );
+  )
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -117,7 +120,7 @@ export default function WardrobeScreen() {
         />
       )}
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -198,4 +201,4 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     marginTop: spacing.sm,
   },
-});
+})

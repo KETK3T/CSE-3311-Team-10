@@ -1,20 +1,34 @@
-import{ useState } from 'react';
+import{ useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform,
-} from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius } from '../../theme';
+  StyleSheet, KeyboardAvoidingView, Platform,Alert,
+} from 'react-native'
+import {SafeAreaView} from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
+import { colors, spacing, radius } from '../../theme'
+import { login } from '../../backend/auth'
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading,setLoading] = useState(false)
 
-  const handleSignIn = () => {
-    // authentication logic
-    navigation.replace('Main');
-  };
+  const handleSignIn = async () => {
+    if(!email || !password){
+      Alert.alert("MISSING INFO", "Please enter your email and password.")
+      return
+    }
+
+    setLoading(true)
+    const {user,error} = await login(email,password)
+    setLoading(false)
+
+    if(error){
+      Alert.alert('Failed To Login', error)
+      return
+    }
+    navigation.replace('Main')
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -28,6 +42,7 @@ export default function LoginScreen({ navigation }) {
         </TouchableOpacity>
 
         <Text style={styles.title}>Login</Text>
+
         <View style={styles.card}>
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -49,8 +64,8 @@ export default function LoginScreen({ navigation }) {
             secureTextEntry
           />
 
-          <TouchableOpacity style={styles.signInBtn} onPress={handleSignIn} activeOpacity={0.85}>
-            <Text style={styles.signInText}>Sign In</Text>
+          <TouchableOpacity style={[styles.signInBtn, loading && {opacity: 0.6}]} onPress={handleSignIn} dsiabled={loading} activeOpacity={0.85}>
+            <Text style={styles.signInText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
             <Text style={styles.forgotText}>Forgot password?</Text>
@@ -59,7 +74,7 @@ export default function LoginScreen({ navigation }) {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -78,7 +93,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radius.md,
     padding: spacing.lg,
-    // Subtle shadow
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -121,4 +135,4 @@ const styles = StyleSheet.create({
     color: colors.textDark,
     textDecorationLine: 'underline',
   },
-});
+})

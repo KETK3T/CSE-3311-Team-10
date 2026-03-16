@@ -1,16 +1,18 @@
-import { useState } from 'react';
-import {View, Text, TouchableOpacity, StyleSheet,Image, Alert,ActivityIndicator, ScrollView} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { colors, spacing, radius } from '../../theme';
-import { uploadClothingItem } from '../../backend/uploadPipeline';
+import { useState } from 'react'
+import {View, Text, TouchableOpacity, StyleSheet,Image, Alert,ActivityIndicator, ScrollView} from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
+import { colors, spacing, radius } from '../../theme'
+import { uploadClothingItem } from '../../backend/uploadPipeline'
+import { useAuth } from '../../backend/useAuth'
 
-const MOCK_USER_ID = '34f19f18-0889-4773-b27c-6bada8f795c4'
+// const MOCK_USER_ID = '34f19f18-0889-4773-b27c-6bada8f795c4'
 const CATEGORIES = ['Tops', 'Bottoms', 'Outerwear', 'Accessories']
 const SEASONS = ['Spring', 'Summer', 'Fall', 'Winter', 'All']
 const OCCASIONS = ['Casual', 'Formal', 'Sport', 'Outdoor', 'Work']
 
 export default function UploadScreen({ navigation }) {
+	const {user} = useAuth()
 	const [selectedImage, setSelectedImage] = useState(null);
 	const [cameraVisible, setCameraVisible] = useState(true); 
 	const [isUploading, setIsUploading] = useState(false);
@@ -23,36 +25,36 @@ export default function UploadScreen({ navigation }) {
 		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 		if (status !== 'granted') {
 			Alert.alert('Permission needed', 'Allow access to your photo library to upload clothes.');
-			return;
+			return
 		}
 		const result = await ImagePicker.launchImageLibraryAsync({
 			mediaTypes: ['images'],
 			allowsEditing: true,
 			aspect: [4, 5],
 			quality: 0.9,
-		});
+		})
 		if (!result.canceled) {
 			setSelectedImage(result.assets[0].uri);
 			setCameraVisible(false);
 		}
-	};
+	}
 
 	const openCamera = async () => {
 		const { status } = await ImagePicker.requestCameraPermissionsAsync();
 		if (status !== 'granted') {
 			Alert.alert('Permission needed', 'Allow camera access to take photos of your clothes.');
-			return;
+			return
 		}
 		const result = await ImagePicker.launchCameraAsync({
 			allowsEditing: true,
 			aspect: [4, 5],
 			quality: 0.9,
-		});
+		})
 		if (!result.canceled) {
 			setSelectedImage(result.assets[0].uri);
 			setCameraVisible(false);
 		}
-	};
+	}
 
 	const handleDiscard = () => {
 			setSelectedImage(null)
@@ -61,7 +63,7 @@ export default function UploadScreen({ navigation }) {
 		setSelectedCategory(null)
 		setSelectedSeasons([])
 		setSelectedOccasions([])
-	};
+	}
 
 	const toggleSeason = (season)=> {
 		setSelectedSeasons(prev =>
@@ -84,7 +86,7 @@ export default function UploadScreen({ navigation }) {
 		setIsUploading(true)
 		const {item, error} = await uploadClothingItem(
 			selectedImage,
-			MOCK_USER_ID,
+			user?.id,
 			(msg) => setProgressMessage(msg),
 			{
 				category: selectedCategory,
@@ -103,7 +105,7 @@ export default function UploadScreen({ navigation }) {
 			'Added to Wardrobe!',
 			`Category: ${selectedCategory}\nSeason: ${selectedSeasons.join(', ') || 'All'}\nOccasion: ${selectedOccasions.join(', ') || 'Casual'}`,
 			[{text: 'OK', onPress: () => {
-				handleDiscard();
+				handleDiscard()
 				navigation.navigate('Wardrobe')
 			}}]
 		)
@@ -131,7 +133,7 @@ export default function UploadScreen({ navigation }) {
 					<View style={{ width: 56 }} />
 				</View>
 			</View>
-		);
+		)
 	}
 
 	return (
@@ -211,7 +213,7 @@ export default function UploadScreen({ navigation }) {
 			</View>
 		</ScrollView>
 		
-	);
+	)
 }
 
 const styles = StyleSheet.create({
@@ -348,4 +350,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   saveText: { color: colors.textDark, fontSize: 15, fontWeight: '600' },
-});
+})

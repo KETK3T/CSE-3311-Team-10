@@ -1,6 +1,6 @@
-import { View, Text, TouchableOpacity, StyleSheet} from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
-import { colors, spacing, radius } from '../../theme';
+import { View, Text, TouchableOpacity, StyleSheet} from 'react-native'
+import {SafeAreaView} from 'react-native-safe-area-context'
+import { colors, spacing, radius } from '../../theme'
 
 export default function WelcomeScreen({ navigation }) {
   return (
@@ -30,7 +30,7 @@ export default function WelcomeScreen({ navigation }) {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -70,4 +70,4 @@ const styles = StyleSheet.create({
     color: colors.textDark,
     fontFamily: 'PatrickHand_400Regular',
   },
-});
+})

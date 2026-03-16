@@ -1,32 +1,31 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StyleSheet, Text, View } from 'react-native';
-import {useFonts, PatrickHand_400Regular} from '@expo-google-fonts/patrick-hand';
-import * as SplashScreen from 'expo-splash-screen';
-import {useEffect} from 'react';
+import 'react-native-url-polyfill/auto'
+import {useState, useEffect} from 'react'
+import { NavigationContainer } from '@react-navigation/native'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import {useFonts, PatrickHand_400Regular} from '@expo-google-fonts/patrick-hand'
+import * as SplashScreen from 'expo-splash-screen'
 
-// Auth Screens
-import WelcomeScreen from './src/screens/authentication/WelcomeScreen';
-import LoginScreen from './src/screens/authentication/LoginScreen';
-import RegisterScreen from './src/screens/authentication/RegisterScreen';
-import ForgotPasswordScreen from './src/screens/authentication/ForgotPasswordScreen';
+import WelcomeScreen from './src/screens/authentication/WelcomeScreen'
+import LoginScreen from './src/screens/authentication/LoginScreen'
+import RegisterScreen from './src/screens/authentication/RegisterScreen'
+import ForgotPasswordScreen from './src/screens/authentication/ForgotPasswordScreen'
 
-// Main App Screens
-import WardrobeScreen from './src/screens/main/WardrobeScreen';
-import MixerScreen from './src/screens/main/MixerScreen';
-import UploadScreen from './src/screens/main/UploadScreen';
-import SocialScreenFeed from './src/screens/main/SocialScreenFeed';
-import ProfileScreen from './src/screens/main/ProfileScreen';
+import WardrobeScreen from './src/screens/main/WardrobeScreen'
+import MixerScreen from './src/screens/main/MixerScreen'
+import UploadScreen from './src/screens/main/UploadScreen'
+import SocialScreenFeed from './src/screens/main/SocialScreenFeed'
+import ProfileScreen from './src/screens/main/ProfileScreen'
 
-// Icons (text-based fallback — swap for vector icons if you install @expo/vector-icons)
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'
+import { supabase } from './src/backend/supabase-client'
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator()
+const Tab = createBottomTabNavigator()
 
-// ─── Bottom Tab Navigator (shown after login) ────────────────────────────────
+SplashScreen.preventAutoHideAsync()
+
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -43,7 +42,7 @@ function MainTabs() {
             Upload: 'add-circle-outline',
             Social: 'people-outline',
             Profile: 'person-outline',
-          };
+          }
           return <Ionicons name={icons[route.name]} size={size} color={color} />;
         },
       })}
@@ -54,32 +53,69 @@ function MainTabs() {
       <Tab.Screen name="Social" component={SocialScreenFeed} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
-  );
+  )
 }
 
-// ─── Root Stack Navigator ─────────────────────────────────────────────────────
 export default function App() {
-  const [fontsLoaded] = useFonts({PatrickHand_400Regular});
+  const [fontsLoaded] = useFonts({PatrickHand_400Regular})
+  const [authLoading,setAuthLoading] = useState(true)
+  const [session,setSession] = useState(null)
+
+  useEffect(() => {
+
+    const timeout = setTimeout(() => {
+      console.log('Auth time out hit')
+      setAuthLoading(false)
+    },3000)
+    supabase.auth.getSession().then(({data: {session}}) => {
+      setSession(session)
+      setAuthLoading(false)
+      clearTimeout(timeout)
+    })
+
+    const {data: {subscription}} = supabase.auth.onAuthStateChange((_event,session) => {
+      setSession(session ?? null)
+    })
+    return () => {
+      subscription.unsubscribe() 
+      clearTimeout(timeout)
+    }
+  }, [])
 
   useEffect(() =>{
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
 
-  if (!fontsLoaded) return null;
+
+    console.log('fontsLoaded: ', fontsLoaded)
+    console.log('AuthLoading: ', authLoading)
+
+    if (fontsLoaded && !authLoading) SplashScreen.hideAsync()
+  }, [fontsLoaded, authLoading])
+
+  if (!fontsLoaded || authLoading) {
+    return (
+      <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+        <ActivityIndicator size='large'/>
+      </View>
+    )
+  }
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* Auth flow */}
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        {session ? (
+          <Stack.Screen name="Main" component={MainTabs}/>
+        ) : (
+          <>
+            <Stack.Screen name="Welcome" component={WelcomeScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
 
-        {/* Main app (tabs) */}
-        <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="Main" component={MainTabs} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -96,4 +132,4 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-});
+})
