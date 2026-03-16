@@ -9,15 +9,7 @@ import { getAllClothingItems, toggleFavorite } from '../../backend/wardrobeServi
 
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Accessories'];
 
-const MOCK_USER_ID = 'user-1'
-// const MOCK_ITEMS = [
-//   { id: '1', category: 'Tops',      imageUri: null, isFavorite: false },
-//   { id: '2', category: 'Outerwear', imageUri: null, isFavorite: true  },
-//   { id: '3', category: 'Bottoms',   imageUri: null, isFavorite: false },
-//   { id: '4', category: 'Tops',      imageUri: null, isFavorite: false },
-//   { id: '5', category: 'Bottoms',   imageUri: null, isFavorite: true  },
-//   { id: '6', category: 'Outerwear', imageUri: null, isFavorite: false },
-// ];
+const MOCK_USER_ID = '34f19f18-0889-4773-b27c-6bada8f795c4'
 
 export default function WardrobeScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
@@ -32,9 +24,10 @@ export default function WardrobeScreen() {
 
   const loadItems = async () => {
     setLoading(true)
-    const {items, error} = await getAllClothingItems(MOCK_USER_ID)
-    console.log('Items in wardrobe:',items)
-    if (!error) setItems(items)
+    const {items: fetchedItems, error} = await getAllClothingItems(MOCK_USER_ID)
+    if (!error){
+      setItems(fetchedItems)
+    } 
     setLoading(false)
   }
 
@@ -43,8 +36,8 @@ export default function WardrobeScreen() {
     ? items
     : items.filter(i => i.category.toLowerCase() === activeCategory.toLowerCase());
 
-  const handleToggleFavorite = async (id) => {
-    const {item ,erro} =  await toggleFavorite(id)
+  const handleToggleFavorite = async (id, currentStatus) => {
+    const {item ,error} =  await toggleFavorite(id, currentStatus)
     if(!error){
       setItems(prev => 
         prev.map(i => i.id === id? {...i, is_favorite: item.is_favorite} : i)
@@ -52,13 +45,13 @@ export default function WardrobeScreen() {
     }
   };
 
-  const renderCard = ({ item, index }) => (
+  const renderCard = ({ item}) => (
     <View style={styles.cardWrapper}>
       <ClothingCard
         imageUri={item.image_url}
         category={item.category}
         isFavorite={item.is_favorite}
-        onFavorite={() => handleToggleFavorite(item.id)}
+        onFavorite={() => handleToggleFavorite(item.id, item.is_favorite)}
       />
     </View>
   );
