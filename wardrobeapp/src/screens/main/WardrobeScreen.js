@@ -4,7 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import ClothingCard from '../../components/ClothingCard';
 import { colors, spacing, radius } from '../../theme';
 import {useFocusEffect} from '@react-navigation/native';
-import { getAllClothingItems, toggleFavorite } from '../../backend/wardrobeService';
+import { getAllClothingItems, toggleFavorite, deleteClothingItem } from '../../backend/wardrobeService';
 
 
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Accessories'];
@@ -45,6 +45,13 @@ export default function WardrobeScreen() {
     }
   };
 
+  const handleDelete = async (id) => {
+    const { error } = await deleteClothingItem(id);
+    if (!error) {
+      setItems(prev => prev.filter(i => i.id !== id));
+    }
+  }
+
   const renderCard = ({ item}) => (
     <View style={styles.cardWrapper}>
       <ClothingCard
@@ -52,6 +59,8 @@ export default function WardrobeScreen() {
         category={item.category}
         isFavorite={item.is_favorite}
         onFavorite={() => handleToggleFavorite(item.id, item.is_favorite)}
+        onDelete={() => handleDelete(item.id)}
+        onAddToMixer={() => console.log('Add to mixer:', item.id)}
       />
     </View>
   );
