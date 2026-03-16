@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     flex: 2,
     paddingVertical: spacing.md,
     borderRadius: radius.sm,
-    alignItems: 'center,',
+    alignItems: 'center',
     backgroundColor: colors.primary,
   },
   saveText: { color: colors.textDark, fontSize: 15, fontWeight: '600' },
