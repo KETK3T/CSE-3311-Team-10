@@ -17,7 +17,7 @@ import ForgotPasswordScreen from './src/screens/authentication/ForgotPasswordScr
 import WardrobeScreen from './src/screens/main/WardrobeScreen';
 import MixerScreen from './src/screens/main/MixerScreen';
 import UploadScreen from './src/screens/main/UploadScreen';
-import SocialScreen from './src/screens/main/SocialScreen';
+import SocialScreenFeed from './src/screens/main/SocialScreenFeed';
 import ProfileScreen from './src/screens/main/ProfileScreen';
 
 // Icons (text-based fallback — swap for vector icons if you install @expo/vector-icons)
@@ -51,7 +51,7 @@ function MainTabs() {
       <Tab.Screen name="Wardrobe" component={WardrobeScreen} />
       <Tab.Screen name="Mixer" component={MixerScreen} />
       <Tab.Screen name="Upload" component={UploadScreen} />
-      <Tab.Screen name="Social" component={SocialScreen} />
+      <Tab.Screen name="Social" component={SocialScreenFeed} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
