@@ -1,8 +1,7 @@
-// src/components/ClothingCard.js
-import React from 'react';
-import { View, Image, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, {useState} from 'react';
+import { View, Image, Text, StyleSheet, TouchableOpacity,Modal,Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius,} from '../theme';
+import { colors, radius,spacing} from '../theme';
 
 export default function ClothingCard({
   imageUri,
@@ -10,26 +9,88 @@ export default function ClothingCard({
   isFavorite = false,
   onPress,
   onFavorite,
+  onDelete,
+  onAddToMixer,
   style,
 }) {
+  const [menuVisible, setMenuVisible] = useState(false)
   return (
-    <TouchableOpacity style={[styles.card, style]} onPress={onPress} activeOpacity={0.85}>
-      <Image
-        source={imageUri ? { uri: imageUri } : require('../../assets/Placeholder.jpeg')}
-        style={styles.image}
-        resizeMode="cover"
-      />
-      <View style={styles.banner}>
-        <Text style={styles.bannerText}>{category.toUpperCase()}</Text>
-        <TouchableOpacity onPress={onFavorite} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons
-            name={isFavorite ? 'star' : 'star-outline'}
-            size={16}
-            color="#fff"
-          />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity style={[styles.card, style]} onPress={onPress} onLongPress={() => setMenuVisible(true)} activeOpacity={0.85} delayLongPress={400}>
+        <Image
+          source={imageUri ? { uri: imageUri } : require('../../assets/Placeholder.jpeg')}
+          style={styles.image}
+          resizeMode="cover"
+        />
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>{category.toUpperCase()}</Text>
+          <TouchableOpacity onPress={onFavorite} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons
+              name={isFavorite ? 'star' : 'star-outline'}
+              size={16}
+              color="#fff"
+            />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType='fade'
+        onRequestClose={() => setMenuVisible(false)}
+      >
+
+        <Pressable style={styles.overlay} onPress={() => setMenuVisible(false)}>
+          <View style={styles.menu}>
+            <TouchableOpacity
+              style ={styles.menuItem}
+              onPress={() => {
+                onFavorite?.()
+                setMenuVisible(false)
+              }}
+            >
+              <Ionicons
+                name={isFavorite?'star':'star-outline'}
+                size={22}
+                color={colors.primaryDark}
+              />
+
+              <Text style={styles.menuText}>
+                {isFavorite ? 'Unfavorite' : 'Favorite'}
+              </Text>
+            </TouchableOpacity>
+          <View styles={styles.divider}/>
+            
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              onAddToMixer?.()
+              setMenuVisible(false)
+            }}
+          >
+            <Ionicons  name="shuffle-outline" size={22} color={colors.textDark} />
+            <Text style={styles.menuText}>Add to Mixer</Text>
+          </TouchableOpacity>
+          <View styles={styles.divider}/>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              onDelete?.()
+              setMenuVisible(false)
+            }}
+          >
+
+            <Ionicons name="trash-outline" size={22} color='red'/>
+            <Text style={[styles.menuText, {color: 'red'}]}>Delete</Text>
+          </TouchableOpacity>
+          </View>
+        </Pressable>
+
+      </Modal>
+
+    </>
+
   );
 }
 
@@ -43,7 +104,6 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   banner: {
     position: 'absolute',
@@ -63,4 +123,38 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
-});
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menu: {
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    width: 220,
+    paddingVertical: spacing.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  menuText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.textDark,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.md,
+  },
+})
