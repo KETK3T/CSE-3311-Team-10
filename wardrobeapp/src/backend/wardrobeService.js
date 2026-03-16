@@ -37,7 +37,7 @@ export const addClothingItem = async (itemData) => {
 	return { item: data, error: error?.message || null };
 }
 
-export const deletClothingItem = async(itemId) => {
+export const deleteClothingItem = async(itemId) => {
 const { error } = await supabase
 		.from('clothing_items')
 		.delete()
