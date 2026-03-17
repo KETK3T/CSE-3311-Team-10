@@ -1,19 +1,30 @@
-import{ useState } from 'react';
+import{ useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform,
-} from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius } from '../../theme';
+  StyleSheet, KeyboardAvoidingView, Platform,Alert
+} from 'react-native'
+import {SafeAreaView} from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
+import { colors, spacing, radius } from '../../theme'
+import { resetPassword } from '../../backend/auth'
 
 export default function ForgotPasswordScreen({ navigation }) {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('')
 
-  const handleReset = () => {
-    //call password-reset API
+  const handleReset = async () => {
+    if(!email){
+      Alert.alert('MISSING INFO', "Please enter your email.")
+      return
+    }
+
+    const {error} = await resetPassword(email)
+    if(error){
+      Alert.alert('Error', error)
+      return
+    }
+    Alert.alert('Email sent', "Please check your email for a password reset link.")
     navigation.goBack();
-  };
+  }
 
   return (
     <SafeAreaView style={styles.safe}>

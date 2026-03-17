@@ -1,21 +1,47 @@
-import { useState } from 'react';
+import { useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform,
-} from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius } from '../../theme';
+  StyleSheet, KeyboardAvoidingView, Platform,Alert,
+} from 'react-native'
+import {SafeAreaView} from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
+import { colors, spacing, radius } from '../../theme'
+import { register } from '../../backend/auth'
 
 export default function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [username,setUsername] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleCreateAccount = () => {
-    // registration logic
-    navigation.replace('Main');
-  };
+  const handleCreateAccount = async () => {
+    if(!email || !password || !username){
+      Alert.alert("MISSING INFO","Please fill in all fields.")
+      return
+    }
+
+    if(password !== confirmPassword){
+      Alert.alert('Password mismatch', 'Passwords does not match.')
+      return
+    }
+
+    if(password.length < 4){
+      Alert.alert('Password Length',"Password must be at least 4 characters.")
+      return
+    }
+
+    setLoading(true)
+    const {user,error} = await register(email,password,username)
+    setLoading(false)
+
+    if(error){
+      Alert.alert('Registration failed', error)
+      return
+    }
+
+    navigation.replace('Main')
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -28,7 +54,7 @@ export default function RegisterScreen({ navigation }) {
         </TouchableOpacity>
 
         <Text style={styles.title}>Register</Text>
-
+        
         <View style={styles.card}>
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -40,7 +66,17 @@ export default function RegisterScreen({ navigation }) {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-
+          
+          <Text style={styles.label}>Username</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Value"
+            placeholderTextColor={colors.placeholder}
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+          />
+          
           <Text style={[styles.label, { marginTop: spacing.md }]}>Password</Text>
           <TextInput
             style={styles.input}
@@ -62,16 +98,17 @@ export default function RegisterScreen({ navigation }) {
           />
 
           <TouchableOpacity
-            style={styles.createBtn}
+            style={[styles.createBtn, loading && {opacity: 0.6}]}
             onPress={handleCreateAccount}
+            disabled={loading}
             activeOpacity={0.85}
           >
-            <Text style={styles.createText}>Create Account</Text>
+            <Text style={styles.createText}>{loading ? 'Creating Account...' : 'Create Account'}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -126,4 +163,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-});
+})
