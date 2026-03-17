@@ -73,8 +73,8 @@ export default function App() {
       clearTimeout(timeout)
     })
 
-    const {data: {subscription}} = supabase.auth.onAuthStateChange((_event,session) => {
-      setSession(session ?? null)
+    const {data: {subscription}} = supabase.auth.onAuthStateChange((_event,newSession) => {
+      setSession(newSession ?? null)
     })
     return () => {
       subscription.unsubscribe() 
@@ -109,8 +109,6 @@ export default function App() {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-
-            <Stack.Screen name="Main" component={MainTabs} />
           </>
         )}
       </Stack.Navigator>
