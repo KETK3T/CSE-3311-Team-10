@@ -14,6 +14,18 @@ module.exports = defineConfig([
 					message: 'Avoid hardcoding Supabase URLs... Please use environment variables.'
 				},
 			],
+
+			'no-unused-vars': ['warn', {argsIgnorePattern: '^_'}],
+			'no-undef': 'error',
+
+			'react/jsx-key': 'error',
+			'react-hooks/rules-of-hooks': 'error',
+			'react-hooks/exhaustive-deps': 'warn',
+
+			'eqeqeq': ['error', 'always'],
+			'no-debugger': 'error',
+
+
 		},
 	},
 ])
