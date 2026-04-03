@@ -5,6 +5,7 @@ import { supabase } from "./supabase-client"
 const uploadImageToStorage = async(imageUri, userId) => {
 	const fileName = `${userId}/${Date.now()}.jpg`
 
+		
 	const formData = new FormData();
 	formData.append('file', {
 		uri: imageUri,

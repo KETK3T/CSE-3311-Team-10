@@ -1,7 +1,8 @@
 import  { useCallback, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator,Alert,Image,} from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator,Alert,Image,Modal,Pressable, TextInput,} from 'react-native'
 import {SafeAreaView} from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
 import ClothingCard from '../../components/ClothingCard'
 import { colors, spacing, radius } from '../../theme'
 import { useAuth } from '../../backend/useAuth'
@@ -9,6 +10,8 @@ import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../../backend/supabase-client'
 import { getAllFavorites } from '../../backend/wardrobeService'
 import { logout } from '../../backend/auth'
+import { checkUsernameAvailable, getItemCount, getProfile, getProfilePicture, updateProfile, uploadAvatar } from '../../backend/profileService'
+
 
 export default function ProfileScreen() {
   const {user} = useAuth()
@@ -17,37 +20,73 @@ export default function ProfileScreen() {
   const [itemCount,setItemCount] = useState(0)
   const [favorites, setFavorites] = useState([]);
 
+  const [editVisible, setEditVisible] = useState(false)
+  const [editUsername, setEditUsername] = useState('')
+  const [editAvatar, setEditAvatar] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+
   useFocusEffect(
     useCallback(() => {
       if(user?.id) loadProfile()
-    },[user])
+    },[user],)
   )
 
   const loadProfile = async() => {
     setLoading(true)
     try{
-      const {data: profileData} = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
+      const{profile: profileData} = await getProfile(user.id)
+      const{items} = await getAllFavorites(user.id)
+      const {count} = await getItemCount(user.id)
+
       setProfile(profileData)
-
-      const {items} = await getAllFavorites(user.id)
       setFavorites(items)
-
-      const {count} = await supabase
-        .from('clothing_items')
-        .select('*', {count: 'exact', head: true})
-        .eq('user_id',user.id)
-      setItemCount(count || 0)
-
+      setItemCount(count)
     }catch(e){
       Alert.alert('PROFILE ERROR', e.message)
     }
     setLoading(false)
   }
+
+  const handleSaveProfile = async () => {
+    const trimmed = editUsername.trim().toLowerCase()
+
+    if(!trimmed) {
+      Alert.alert('Invalid', 'Username cannot be empty.') 
+      return
+    }
+
+    if(!/^[a-z0-9._]+$/.test(trimmed)){
+      Alert.alert('Invalid', 'Only letters, numbers, dots and underscore allowed')
+      return
+    }
+
+    setIsSaving(true)
+    try{
+      if(trimmed !== profile?.username?.toLowerCase()){
+        const available = await checkUsernameAvailable(trimmed, user.id)
+        if(!available){
+          Alert.alert('Taken', 'That username has already been taken')
+          setIsSaving(false)
+          return
+        }
+      }
+      let avatarUrl = profile?.avatar_url || null
+      if(editAvatar){
+        avatarUrl = await uploadAvatar(user.id, editAvatar)
+      }
+
+      const {profile: updated, error} = await updateProfile(user.id, {username: trimmed, avatarUrl})
+      if(error) throw new Error(error)
+
+      setProfile(updated)
+      setEditVisible(false)
+    }catch(e){
+      Alert.alert('Error', e.message)
+    }
+    setIsSaving(false)
+  }
+
+
 
   const handleLogOut = async () => {
     Alert.alert(
@@ -64,6 +103,30 @@ export default function ProfileScreen() {
     )
   }
 
+  const openEditModal = () => {
+    setEditUsername(profile?.username || '')
+    setEditAvatar(null)
+    setEditVisible(true)
+  }
+
+  const pickAvatar = async () => {
+    const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted'){
+      Alert.alert('Permission Needed', 'Please Allow access to your photo library')
+      return
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1,1],
+      quality: 0.8,
+    })
+    if(!result.canceled){
+      setEditAvatar(result.assets[0].uri)
+    }
+  }
+
   if(loading){
     return(
       <SafeAreaView style={styles.safe}>
@@ -75,7 +138,13 @@ export default function ProfileScreen() {
   }
 
 
+  const avatarSource = editAvatar
+    ? {uri: editAvatar} 
+    : profile?.avatar_url 
+    ? {uri: profile.avatar_url} 
+    : null
 
+  
   const toggleFavorite = (id) => {
     setFavorites(prev =>
       prev.map(f => f.id === id ? { ...f, isFavorite: !f.isFavorite } : f)
@@ -119,7 +188,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.editRow}>
-          <TouchableOpacity style={styles.editBtn}>
+          <TouchableOpacity style={styles.editBtn} onPress={openEditModal}>
             <Text style={styles.editText}>Edit profile</Text>
           </TouchableOpacity>
         </View>
@@ -146,6 +215,48 @@ export default function ProfileScreen() {
           </View>
         )}
       </ScrollView>
+      <Modal visible={editVisible} transparent animationType='slide' onRequestClose={() => setEditVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setEditVisible(false)}>
+          <Text style={styles.modalTitle}>Edit Profile</Text>
+
+          <TouchableOpacity style={styles.modalAvatarWrapper} onPress={pickAvatar}>
+            {editAvatar || profile?.avatar_url ? (
+              <Image source={{uri: editAvatar || profile.avatar_url}} style={styles.modalAvatarImg}/>
+            ):(
+              <View style={styles.modalAvatarCircle}>
+                <Ionicons name='person' size={40} color={colors.textMid}/>
+              </View>
+            )}
+            <View style={styles.cameraBadge}>
+              <Ionicons name='camera' size={14} color="#fff"/>
+            </View>
+          </TouchableOpacity>
+        
+          <Text style={styles.inputLabel}>Username</Text>
+          <TextInput
+            style={styles.input}
+            value={editUsername}
+            onChangeText={setEditUsername}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder='your_username'
+            placeholderTextColor={colors.textLight}
+          />
+          <TouchableOpacity
+            style={[styles.saveBtn, isSaving && {opacity:0.6}]}
+            onPress={handleSaveProfile}
+            disabled={isSaving}
+          >
+            {isSaving
+              ? <ActivityIndicator color={colors.white}/>
+              : <Text style={styles.saveBtnText}>Save</Text>
+            }
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditVisible(false)}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -241,4 +352,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
   },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: spacing.xl, paddingBottom: 48, alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18, fontWeight: '700', color: colors.textDark, marginBottom: spacing.lg,
+  },
+  modalAvatarWrapper: { position: 'relative', marginBottom: spacing.lg },
+  modalAvatarCircle: {
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: colors.inputBg, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  modalAvatarImg: { width: 88, height: 88, borderRadius: 44 },
+  cameraBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    backgroundColor: colors.textDark,
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.white,
+  },
+  inputLabel: {
+    alignSelf: 'flex-start', fontSize: 13,
+    fontWeight: '600', color: colors.textDark, marginBottom: spacing.sm,
+  },
+  input: {
+    width: '100%', borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    fontSize: 15, color: colors.textDark, backgroundColor: colors.inputBg, marginBottom: spacing.lg,
+  },
+  saveBtn: {
+    width: '100%', backgroundColor: colors.textDark,
+    paddingVertical: spacing.md, borderRadius: radius.sm,
+    alignItems: 'center', marginBottom: spacing.sm,
+  },
+  saveBtnText: { color: colors.white, fontSize: 15, fontWeight: '600' },
+  cancelBtn: { paddingVertical: spacing.sm },
+  cancelText: { fontSize: 14, color: colors.textMid },
 })

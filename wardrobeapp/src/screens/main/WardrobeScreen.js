@@ -103,7 +103,7 @@ export default function WardrobeScreen() {
           numColumns={2}
           contentContainerStyle={{
               paddingHorizontal: spacing.md,
-              paddingBottom: spacing.lg,
+              paddingBottom: spacing.sumo,
               flexGrow: 0,
               justifyContent: 'flex-start',
             }}
