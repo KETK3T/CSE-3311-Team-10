@@ -1,7 +1,15 @@
-import React, {useState} from 'react';
-import { View, Image, Text, StyleSheet, TouchableOpacity,Modal,Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, radius,spacing} from '../theme';
+import React, {useState} from 'react'
+import { View, Image, Text, StyleSheet, TouchableOpacity,Modal,Pressable } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { colors, radius,spacing} from '../theme'
+
+const CATEGORY_COLORS = {
+  Tops: '#F9A8D4',
+  Bottoms: '#93C5FD',
+  Outerwear: '#6EE7B7',
+  Accessories: '#FCD34D',
+  default: '#C4B5FD',
+}
 
 export default function ClothingCard({
   imageUri,
@@ -14,6 +22,7 @@ export default function ClothingCard({
   style,
 }) {
   const [menuVisible, setMenuVisible] = useState(false)
+  const bannerColor = CATEGORY_COLORS[category] || CATEGORY_COLORS.default
   return (
     <>
       <TouchableOpacity style={[styles.card, style]} onPress={onPress} onLongPress={() => setMenuVisible(true)} activeOpacity={0.85} delayLongPress={400}>
@@ -22,7 +31,7 @@ export default function ClothingCard({
           style={styles.image}
           resizeMode="cover"
         />
-        <View style={styles.banner}>
+        <View style={[styles.banner, { backgroundColor: bannerColor }]}>
           <Text style={styles.bannerText}>{category.toUpperCase()}</Text>
           <TouchableOpacity onPress={onFavorite} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons
@@ -91,7 +100,7 @@ export default function ClothingCard({
 
     </>
 
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -110,7 +119,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.labelBg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -118,7 +126,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   bannerText: {
-    color: '#fff',
+    color: '#1a1a1a',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,

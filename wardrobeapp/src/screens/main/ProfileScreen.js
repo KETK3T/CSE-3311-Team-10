@@ -1,4 +1,4 @@
-import  { useCallback, useState } from 'react'
+import  { useCallback, useState, useEffect,} from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator,Alert,Image,Modal,Pressable, TextInput,} from 'react-native'
 import {SafeAreaView} from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -7,10 +7,9 @@ import ClothingCard from '../../components/ClothingCard'
 import { colors, spacing, radius } from '../../theme'
 import { useAuth } from '../../backend/useAuth'
 import { useFocusEffect } from '@react-navigation/native'
-import { supabase } from '../../backend/supabase-client'
-import { getAllFavorites } from '../../backend/wardrobeService'
+import { getAllFavorites, toggleFavorite, deleteClothingItem } from '../../backend/wardrobeService'
 import { logout } from '../../backend/auth'
-import { checkUsernameAvailable, getItemCount, getProfile, getProfilePicture, updateProfile, uploadAvatar } from '../../backend/profileService'
+import { checkUsernameAvailable, getItemCount, getProfile, updateProfile, uploadAvatar } from '../../backend/profileService'
 
 
 export default function ProfileScreen() {
@@ -18,18 +17,18 @@ export default function ProfileScreen() {
   const [profile,setProfile] = useState(null)
   const [loading,setLoading] = useState(false)
   const [itemCount,setItemCount] = useState(0)
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState([])
 
   const [editVisible, setEditVisible] = useState(false)
   const [editUsername, setEditUsername] = useState('')
   const [editAvatar, setEditAvatar] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  useFocusEffect(
-    useCallback(() => {
-      if(user?.id) loadProfile()
-    },[user],)
-  )
+
+  useEffect(() => {
+    if(!user?.id) return
+    loadProfile()
+  }, [user?.id])
 
   const loadProfile = async() => {
     setLoading(true)
@@ -47,6 +46,32 @@ export default function ProfileScreen() {
     setLoading(false)
   }
 
+  useFocusEffect(
+    useCallback(() => {
+      if(!user?.id || loading) return
+      const syncProfile = async () => {
+        try{
+          const{profile: profileData} = await getProfile(user.id)
+          const{items} = await getAllFavorites(user.id)
+          const {count} = await getItemCount(user.id)
+
+          setProfile(prev => 
+            JSON.stringify(prev) !== JSON.stringify(profileData) ? profileData : prev
+          )
+          setFavorites(prev => {
+            const prevIds = prev.map(f => f.id).join()
+            const nextIds = items.map(f => f.id).join()
+            return prevIds !== nextIds ? items : prev
+          })
+          setItemCount(prev => prev !== count ? count : prev)
+        }catch(e){
+          console.log('sync Error', e.message)
+        }
+      }
+      syncProfile()
+    }, [user?.id, loading])
+  )
+
   const handleSaveProfile = async () => {
     const trimmed = editUsername.trim().toLowerCase()
 
@@ -62,6 +87,8 @@ export default function ProfileScreen() {
 
     setIsSaving(true)
     try{
+      const updates = {}
+
       if(trimmed !== profile?.username?.toLowerCase()){
         const available = await checkUsernameAvailable(trimmed, user.id)
         if(!available){
@@ -69,13 +96,21 @@ export default function ProfileScreen() {
           setIsSaving(false)
           return
         }
-      }
-      let avatarUrl = profile?.avatar_url || null
-      if(editAvatar){
-        avatarUrl = await uploadAvatar(user.id, editAvatar)
+        updates.username = trimmed
       }
 
-      const {profile: updated, error} = await updateProfile(user.id, {username: trimmed, avatarUrl})
+      if(editAvatar){
+        updates.avatar_url = await uploadAvatar(user.id,editAvatar)
+        console.log('avatar_url: ', updates.avatar_url)
+      }
+
+      if(Object.keys(updates).length == 0){
+        setEditVisible(false)
+        setIsSaving(false)
+        return
+      }
+
+      const {profile: updated, error} = await updateProfile(user.id, updates)
       if(error) throw new Error(error)
 
       setProfile(updated)
@@ -136,18 +171,34 @@ export default function ProfileScreen() {
       </SafeAreaView>
     )
   }
-
-
-  const avatarSource = editAvatar
-    ? {uri: editAvatar} 
-    : profile?.avatar_url 
-    ? {uri: profile.avatar_url} 
-    : null
-
   
-  const toggleFavorite = (id) => {
-    setFavorites(prev =>
-      prev.map(f => f.id === id ? { ...f, isFavorite: !f.isFavorite } : f)
+  const handleToggleFavorite = async (id, currentStatus) => {
+    const {item ,error} =  await toggleFavorite(id, currentStatus)
+    if(!error){
+      setFavorites(prev => 
+        prev.filter(f => f.id !== id)
+      )
+    }
+  }
+
+  const handleDelete = async (id) => {
+    Alert.alert(
+      'Delete Item',
+      'Are you sure you want to remove this item from your wardrobe?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await deleteClothingItem(id)
+            if (!error) {
+              setFavorites(prev => prev.filter(i => i.id !== id))
+              setItemCount(prev => prev - 1)
+            }
+          },
+        },
+      ]
     )
   }
 
@@ -173,7 +224,7 @@ export default function ProfileScreen() {
 
         
 
-        <Text style={styles.username}>{profile?.username?.toLowerCase() || 'USERNAME'}</Text>
+        <Text style={styles.username}>{profile?.username?.toLowerCase() || 'A'}</Text>
 
 
         <View style={styles.statsRow}>
@@ -209,6 +260,8 @@ export default function ProfileScreen() {
                   imageUri={item.image_url}
                   category={item.category}
                   isFavorite={item.is_favorite}
+                  onFavorite={() => handleToggleFavorite(item.id, item.is_favorite)}
+                  onDelete={() => handleDelete(item.id)}
                 />
               </View>
             ))}
@@ -217,44 +270,50 @@ export default function ProfileScreen() {
       </ScrollView>
       <Modal visible={editVisible} transparent animationType='slide' onRequestClose={() => setEditVisible(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setEditVisible(false)}>
-          <Text style={styles.modalTitle}>Edit Profile</Text>
+          <Pressable style={styles.modalSheet} onPress={e => e.stopPropagation()}>
 
-          <TouchableOpacity style={styles.modalAvatarWrapper} onPress={pickAvatar}>
-            {editAvatar || profile?.avatar_url ? (
-              <Image source={{uri: editAvatar || profile.avatar_url}} style={styles.modalAvatarImg}/>
-            ):(
-              <View style={styles.modalAvatarCircle}>
-                <Ionicons name='person' size={40} color={colors.textMid}/>
+            <TouchableOpacity style={styles.modalAvatarWrapper} onPress={pickAvatar}>
+              {editAvatar || profile?.avatar_url ? (
+                <Image source={{ uri: editAvatar || profile.avatar_url }} style={styles.modalAvatarImg} />
+              ) : (
+                <View style={styles.modalAvatarCircle}>
+                  <Ionicons name='person' size={40} color={colors.textMid} />
+                </View>
+              )}
+              <View style={styles.cameraBadge}>
+                <Ionicons name='camera' size={14} color="#fff" />
               </View>
-            )}
-            <View style={styles.cameraBadge}>
-              <Ionicons name='camera' size={14} color="#fff"/>
-            </View>
-          </TouchableOpacity>
-        
-          <Text style={styles.inputLabel}>Username</Text>
-          <TextInput
-            style={styles.input}
-            value={editUsername}
-            onChangeText={setEditUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder='your_username'
-            placeholderTextColor={colors.textLight}
-          />
-          <TouchableOpacity
-            style={[styles.saveBtn, isSaving && {opacity:0.6}]}
-            onPress={handleSaveProfile}
-            disabled={isSaving}
-          >
-            {isSaving
-              ? <ActivityIndicator color={colors.white}/>
-              : <Text style={styles.saveBtnText}>Save</Text>
-            }
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditVisible(false)}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
+
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+
+            <Text style={styles.inputLabel}>Username</Text>
+            <TextInput
+              style={styles.input}
+              value={editUsername}
+              onChangeText={setEditUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder='your_username'
+              placeholderTextColor={colors.textLight}
+            />
+
+            <TouchableOpacity
+              style={[styles.saveBtn, isSaving && { opacity: 0.6 }]}
+              onPress={handleSaveProfile}
+              disabled={isSaving}
+            >
+              {isSaving
+                ? <ActivityIndicator color={colors.white} />
+                : <Text style={styles.saveBtnText}>Save</Text>
+              }
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditVisible(false)}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+
+          </Pressable>
         </Pressable>
       </Modal>
     </SafeAreaView>
@@ -353,7 +412,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'flex-end',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
   },
   modalSheet: {
     backgroundColor: colors.white,

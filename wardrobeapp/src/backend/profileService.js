@@ -1,24 +1,38 @@
-import { use } from 'react'
 import {supabase} from './supabase-client'
 
 export const getProfile= async(userId) => {
 	const{data,error} = await supabase
 		.from('profiles')
 		.select('*')
-		.eq('user_id', userId)
+		.eq('id', userId)
 		.single()
 	return { profile: data || [], error: error?.message || null}
 }
 
-export const updateProfile = async (userId, {username, avatarUrl}) => {
+export const updateProfile = async (userId, updates) => {
+	const fields = {}
+	if(updates.username !== undefined) fields.username = updates.username
+	if(updates.avatar_url !== undefined) fields.avatar_url = updates.avatar_url
+
 	const {data, error} = await supabase
 		.from('profiles')
-		.update({username, avatar_url: avatarUrl})
+		.update(fields)
 		.eq('id', userId)
 		.select()
 		.single()
-	return {profile: data || null, error: error?.message || null}
+		return {profile: data || null, error: error?.message || null}
+	}
+	
+export const updateAvatar = async (userId, avatar_url) => {
+	const {data,error} = await supabase
+		.from('profiles')
+		.update({avatar_url})
+		.eq('id',userId)
+		.select()
+		.single()
+		return {profile: data || null, error: error?.message || null}
 }
+
 
 export const checkUsernameAvailable = async (username, currentUserId) => {
 	const {data} = await supabase
@@ -29,11 +43,10 @@ export const checkUsernameAvailable = async (username, currentUserId) => {
 		.maybeSingle()
 	return !data
 }
-
 export const uploadAvatar = async (userId, uri) => {
 	const fileName = `${userId}/${Date.now()}.jpg`
 	const formData = new FormData()
-	FormData.append('file', {uri, name: fileName, type: 'image/jpeg'})
+	formData.append('file', {uri: uri, name: fileName, type: 'image/jpeg'})
 
 	const {error} = await supabase.storage
 		.from('profile_pics')

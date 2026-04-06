@@ -16,8 +16,8 @@ const OCCASIONS = ['Casual', 'Formal', 'Sport', 'Outdoor', 'Work']
 
 export default function UploadScreen({ navigation }) {
 	const {user} = useAuth()
-	const [selectedImage, setSelectedImage] = useState(null);
-	const [isUploading, setIsUploading] = useState(false);
+	const [selectedImage, setSelectedImage] = useState(null)
+	const [isUploading, setIsUploading] = useState(false)
 	const [progressMessage,setProgressMessage] = useState('')
 	const [selectedCategory, setSelectedCategory] = useState(null)
 	const [selectedSeasons, setSelectedSeasons] = useState([])
@@ -49,9 +49,9 @@ export default function UploadScreen({ navigation }) {
 	},[])
 
 	const openGallery = async () => {
-		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
 		if (status !== 'granted') {
-			Alert.alert('Permission needed', 'Allow access to your photo library to upload clothes.');
+			Alert.alert('Permission needed', 'Allow access to your photo library to upload clothes.')
 			return
 		}
 		const result = await ImagePicker.launchImageLibraryAsync({
@@ -61,7 +61,7 @@ export default function UploadScreen({ navigation }) {
 			quality: 0.9,
 		})
 		if (!result.canceled) {
-			setSelectedImage(result.assets[0].uri);
+			setSelectedImage(result.assets[0].uri)
 		}
 	}
 

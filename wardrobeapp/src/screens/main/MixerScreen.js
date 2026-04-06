@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect,useCallback } from 'react'
+import { useState, useRef,useCallback, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Share, FlatList, useWindowDimensions, ActivityIndicator
@@ -14,7 +14,7 @@ import {useFocusEffect} from '@react-navigation/native'
 const CATEGORIES = ['Outerwear', 'Tops', 'Bottoms']
 
 
-export default function MixerScreen() {
+export default function MixerScreen({navigation, route}) {
 
   const {user} = useAuth()
   const [wardrobe, setWardrobe] = useState({Tops: [], Outerwear: [], Bottoms: []})
@@ -35,42 +35,83 @@ export default function MixerScreen() {
   const cardWidth = width - 120
 
 
+  useEffect(() => {
+    if(!user?.id) return
+    const initFetch = async () => {
+      setIsLoading(true)
+      const results = await Promise.all(
+        CATEGORIES.map(cat => getClothingItemByCategory(user.id, cat))
+      )
+      const newWardrobe = {}
+      CATEGORIES.forEach((cat, i) => {
+        newWardrobe[cat] = results[i].items
+      })
+      setWardrobe(newWardrobe)
+      setIsLoading(false)
+    }
+    initFetch()
+  }, [user?.id])
 
   useFocusEffect(
     useCallback(() => {
       if(!user?.id) return
-      const fetchWardrobe = async () => {
-        setIsLoading(true)
+      const syncWardrobe = async () => {
         const results = await Promise.all(
         CATEGORIES.map(cat => getClothingItemByCategory(user.id, cat))
         )
-        const newWardrobe = {}
-        CATEGORIES.forEach((cat, i) => {
-          newWardrobe[cat] = results[i].items
-        })
 
-        setWardrobe(newWardrobe)
-        setIsLoading(false)
+        setWardrobe(prev => {
+          const next = {...prev}
+          let hasChanges = false
+
+          CATEGORIES.forEach((cat, i) => {
+            const fetchedItems = results[i].items
+            const existingIds = new Set(prev[cat].map(item => item.id))
+            const newItems = fetchedItems.filter(item => !existingIds.has(item.id))
+          
+            if(newItems.length > 0){
+              next[cat] = [...prev[cat], ...newItems]
+              hasChanges = true
+            }
+          })
+          return hasChanges ? next: prev
+        })
       }
-      fetchWardrobe()
-    }, [user?.id])
+      syncWardrobe()
+    }, [user?.id, isLoading])
   )
 
+  useEffect(() => {
+    const scrollTo = route.params?.scrollTo
+    if(!scrollTo || !wardrobe[scrollTo.category]) return
+    const index = wardrobe[scrollTo.category].findIndex(i => i.id === scrollTo.id)
+    if (index === -1) return
+    setTimeout(() => {
+      flatListRefs[scrollTo.category]?.current?.scrollToIndex({
+        index,
+        animated: true,
+      })
+    }, 300)
+
+    navigation.setParams({scrollTo: null, timestamp: null})
+  },[route.params?.timestamp])
+
+
   const handleRandomize = () => {
-    const newSelected = {};
+    const newSelected = {}
     CATEGORIES.forEach(cat => {
       if(wardrobe[cat].length === 0) return
-      const randomIndex = Math.floor(Math.random() * wardrobe[cat].length);
-      newSelected[cat] = randomIndex;
-      flatListRefs[cat].current?.scrollToIndex({ index: randomIndex, animated: true });
-    });
-    setSelected(newSelected);
+      const randomIndex = Math.floor(Math.random() * wardrobe[cat].length)
+      newSelected[cat] = randomIndex
+      flatListRefs[cat].current?.scrollToIndex({ index: randomIndex, animated: true })
+    })
+    setSelected(newSelected)
   }
 
   const handleShare = async () => {
     try {
-      await Share.share({ message: 'Check out my outfit from My Wardrobe app! 👗' });
-    } catch (e) { console.log(e); }
+      await Share.share({ message: 'Check out my outfit from My Wardrobe app! 👗' })
+    } catch (e) { console.log(e) }
   }
 
   if(isLoading){
@@ -165,7 +206,7 @@ export default function MixerScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -236,4 +277,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMid,
   },
-});
+})

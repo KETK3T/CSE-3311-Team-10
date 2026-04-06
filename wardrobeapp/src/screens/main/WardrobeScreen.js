@@ -1,31 +1,35 @@
-import { useCallback, useState, useEffect } from 'react';
-import {View, Text, FlatList, TouchableOpacity,StyleSheet, ScrollView, ActivityIndicator,} from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
-import ClothingCard from '../../components/ClothingCard';
-import { colors, spacing, radius } from '../../theme';
-import {useFocusEffect} from '@react-navigation/native';
-import { getAllClothingItems, toggleFavorite, deleteClothingItem } from '../../backend/wardrobeService';
-import { useAuth } from '../../backend/useAuth';
+import { useCallback, useState, useEffect } from 'react'
+import {View, Text, FlatList, TouchableOpacity,StyleSheet, ScrollView, ActivityIndicator, Alert,} from 'react-native'
+import {SafeAreaView} from 'react-native-safe-area-context'
+import ClothingCard from '../../components/ClothingCard'
+import { colors, spacing, radius } from '../../theme'
+import {useFocusEffect} from '@react-navigation/native'
+import { getAllClothingItems, toggleFavorite, deleteClothingItem } from '../../backend/wardrobeService'
+import { useAuth } from '../../backend/useAuth'
 
 
-const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Accessories'];
-
-// const MOCK_USER_ID = '34f19f18-0889-4773-b27c-6bada8f795c4'
-
-export default function WardrobeScreen() {
+const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Accessories']
+const CATEGORY_COLORS = {
+  Tops: '#F9A8D4',
+  Bottoms: '#93C5FD',
+  Outerwear: '#6EE7B7',
+  Accessories: '#FCD34D',
+  default: '#C4B5FD',
+}
+export default function WardrobeScreen({navigation}) {
   const {user} = useAuth()
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('All')
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  useFocusEffect(
-    useCallback(() => {
-      loadItems()
-    },[user])
-  )
+
+
+  useEffect(() => {
+    if(!user?.id) return
+    loadItems()
+  }, [user?.id])
 
   const loadItems = async () => {
-    if(!user?.id) return
     setLoading(true)
     const {items: fetchedItems, error} = await getAllClothingItems(user?.id)
     if (!error){
@@ -34,10 +38,25 @@ export default function WardrobeScreen() {
     setLoading(false)
   }
 
+  useFocusEffect(
+    useCallback(() => {
+      if(!user?.id || loading) return
+      const syncItems = async() => {
+        const {items: fetchedItems, error} = await getAllClothingItems(user.id)
+        if(error) return
+        setItems(prev => {
+          const prevIds = prev.map(i => i.id).join()
+          const nextIds = fetchedItems.map(i => i.id).join()
+          return prevIds !== nextIds ? fetchedItems : prev
+        })
+      }
+      syncItems()
+    }, [user?.id, loading])
+  )
 
   const filtered = activeCategory === 'All'
     ? items
-    : items.filter(i => i.category.toLowerCase() === activeCategory.toLowerCase());
+    : items.filter(i => i.category.toLowerCase() === activeCategory.toLowerCase())
 
   const handleToggleFavorite = async (id, currentStatus) => {
     const {item ,error} =  await toggleFavorite(id, currentStatus)
@@ -49,10 +68,23 @@ export default function WardrobeScreen() {
   }
 
   const handleDelete = async (id) => {
-    const { error } = await deleteClothingItem(id);
-    if (!error) {
-      setItems(prev => prev.filter(i => i.id !== id));
-    }
+    Alert.alert(
+      'Delete Item',
+      'Are you sure you want to remove this item from your wardrobe?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await deleteClothingItem(id)
+            if (!error) {
+              setItems(prev => prev.filter(i => i.id !== id))
+            }
+          },
+        },
+      ]
+    )
   }
 
   const renderCard = ({ item}) => (
@@ -63,11 +95,16 @@ export default function WardrobeScreen() {
         isFavorite={item.is_favorite}
         onFavorite={() => handleToggleFavorite(item.id, item.is_favorite)}
         onDelete={() => handleDelete(item.id)}
-        onAddToMixer={() => console.log('Add to mixer:', item.id)}
+        onAddToMixer={() => navigation.jumpTo('Mixer', 
+          {
+            scrollTo: {category: item.category, id:item.id},
+            timestamp: Date.now()
+          })}
       />
     </View>
   )
 
+  
   return (
     <SafeAreaView style={styles.safe}>
       <Text style={styles.title}>My Wardrobe</Text>
@@ -78,18 +115,22 @@ export default function WardrobeScreen() {
         contentContainerStyle={styles.filterRow}
         style={{overflow: 'visible', paddingLeft: spacing.md,}}
       >
-        {CATEGORIES.map(cat => (
-          <TouchableOpacity
-            key={cat}
-            style={[styles.chip, activeCategory === cat && styles.chipActive]}
-            onPress={() => setActiveCategory(cat)}
-            activeOpacity={0.75}
-          >
-            <Text style={[styles.chipText, activeCategory === cat && styles.chipTextActive]}>
-              {cat}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {CATEGORIES.map(cat => {
+          const isActive =  activeCategory === cat
+          const catColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.default
+          return(
+            <TouchableOpacity
+              key={cat}
+              style={[styles.chip, isActive && {backgroundColor: catColor, borderColor: catColor}]}
+              onPress={() => setActiveCategory(cat)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
       </ScrollView>
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -122,6 +163,8 @@ export default function WardrobeScreen() {
     </SafeAreaView>
   )
 }
+
+
 
 const styles = StyleSheet.create({
   safe: { flex: 0, backgroundColor: colors.background, justifyContent: 'flex-start', height: 'auto' },
@@ -164,7 +207,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   chipTextActive: {
-    color: colors.white,
+    color: '#1a1a1a',
   },
   grid: {
     paddingHorizontal: spacing.md,
