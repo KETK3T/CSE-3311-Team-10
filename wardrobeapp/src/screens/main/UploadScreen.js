@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState,useRef,useEffect, } from 'react'
 import {View, Text, TouchableOpacity, StyleSheet,Image, Alert,ActivityIndicator, ScrollView} from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
+import * as MediaLibrary from 'expo-media-library'
 import { colors, spacing, radius } from '../../theme'
 import { uploadClothingItem } from '../../backend/uploadPipeline'
 import { useAuth } from '../../backend/useAuth'
+import {CameraView, useCameraPermissions} from 'expo-camera'
+
 
 // const MOCK_USER_ID = '34f19f18-0889-4773-b27c-6bada8f795c4'
 const CATEGORIES = ['Tops', 'Bottoms', 'Outerwear', 'Accessories']
@@ -13,18 +16,42 @@ const OCCASIONS = ['Casual', 'Formal', 'Sport', 'Outdoor', 'Work']
 
 export default function UploadScreen({ navigation }) {
 	const {user} = useAuth()
-	const [selectedImage, setSelectedImage] = useState(null);
-	const [cameraVisible, setCameraVisible] = useState(true); 
-	const [isUploading, setIsUploading] = useState(false);
+	const [selectedImage, setSelectedImage] = useState(null)
+	const [isUploading, setIsUploading] = useState(false)
 	const [progressMessage,setProgressMessage] = useState('')
 	const [selectedCategory, setSelectedCategory] = useState(null)
-		const [selectedSeasons, setSelectedSeasons] = useState([])
+	const [selectedSeasons, setSelectedSeasons] = useState([])
 	const [selectedOccasions, setSelectedOccasions] = useState([])
+	const [facing, setFacing] = useState('back')
+	const [lastPhoto, setLastPhoto] = useState(null)
+	const[permission, requestPermission] = useCameraPermissions()
+	const cameraRef = useRef(null)
+	
+
+
+	useEffect(() => {
+		const fetchLastPhoto = async () => {
+			const {status} = await MediaLibrary.requestPermissionsAsync()
+			if (status !== 'granted') return
+
+			const {assets} = await MediaLibrary.getAssetsAsync({
+				mediaType: 'photo',
+				sortBy: [MediaLibrary.SortBy.creationTime],
+				first: 1,
+			})
+
+			if(assets.length > 0){
+				const assetInfo = await MediaLibrary.getAssetInfoAsync(assets[0].id)
+				setLastPhoto(assetInfo.localUri)
+			}
+		}
+		fetchLastPhoto()
+	},[])
 
 	const openGallery = async () => {
-		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
 		if (status !== 'granted') {
-			Alert.alert('Permission needed', 'Allow access to your photo library to upload clothes.');
+			Alert.alert('Permission needed', 'Allow access to your photo library to upload clothes.')
 			return
 		}
 		const result = await ImagePicker.launchImageLibraryAsync({
@@ -34,31 +61,21 @@ export default function UploadScreen({ navigation }) {
 			quality: 0.9,
 		})
 		if (!result.canceled) {
-			setSelectedImage(result.assets[0].uri);
-			setCameraVisible(false);
+			setSelectedImage(result.assets[0].uri)
 		}
 	}
 
-	const openCamera = async () => {
-		const { status } = await ImagePicker.requestCameraPermissionsAsync();
-		if (status !== 'granted') {
-			Alert.alert('Permission needed', 'Allow camera access to take photos of your clothes.');
-			return
-		}
-		const result = await ImagePicker.launchCameraAsync({
-			allowsEditing: true,
-			aspect: [4, 5],
+	const takePicture = async () => {
+		if(!cameraRef.current) return
+		const photo = await cameraRef.current.takePictureAsync({
 			quality: 0.9,
+			skipProcessing: false,
 		})
-		if (!result.canceled) {
-			setSelectedImage(result.assets[0].uri);
-			setCameraVisible(false);
-		}
+		setSelectedImage(photo.uri)
 	}
 
 	const handleDiscard = () => {
-			setSelectedImage(null)
-		setCameraVisible(true)
+		setSelectedImage(null)
 		setProgressMessage('')
 		setSelectedCategory(null)
 		setSelectedSeasons([])
@@ -111,27 +128,51 @@ export default function UploadScreen({ navigation }) {
 		)
 	}
 
-	if (cameraVisible && !selectedImage) {
+	if(!permission){
+		return <View style = {styles.cameraScreen} />
+	}
+
+	if(!permission.granted){
+		return(
+			<View style={styles.permissionScreen}>
+				<Text style={styles.permissionText}>Camera Access is needed to take photos of your clothes</Text>
+				<TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+					<Text style={style.permissionBtnText}>Grant Permission</Text>
+				</TouchableOpacity>
+			</View>
+		)
+	}
+
+	if (!selectedImage) {
 		return (
 			<View style={styles.cameraScreen}>
-				<TouchableOpacity
-					style={styles.closeBtn}
-					onPress={() => navigation.navigate('Wardrobe')}
-				>
-					<Ionicons name="close" size={28} color="#fff" />
-				</TouchableOpacity>
-
+				<CameraView style={StyleSheet.absoluteFill} facing={facing} ref={cameraRef}/>
+			
+				<View style={styles.topBar}>
+					<TouchableOpacity onPress={() => navigation.navigate('Wardrobe')}>
+						<Ionicons name="close" size={28} color="#fff"/>
+					</TouchableOpacity>
+					<TouchableOpacity onPress={() => setFacing(f => f === 'back' ? 'front' : 'back')}>
+						<Ionicons name="camera-reverse-outline" size={28} color="#fff"/>
+					</TouchableOpacity>
+				</View>
+			
 				<View style={styles.cameraBar}>
 					<TouchableOpacity style={styles.galleryThumb} onPress={openGallery}>
-						<Ionicons name="image-outline" size={28} color="#fff" />
+						{lastPhoto ? (
+							<Image source={{uri: lastPhoto}} style={styles.galleryThumbImage} />
+						): (
+							<Ionicons name="image-outline" size={28} color="#fff"/>
+						)}
 					</TouchableOpacity>
 
-					<TouchableOpacity style={styles.shutter} onPress={openCamera}>
-						<View style={styles.shutterInner} />
+					<TouchableOpacity style={styles.shutter} onPress={takePicture}>
+						<View style={styles.shutterInner}/>
 					</TouchableOpacity>
 
-					<View style={{ width: 56 }} />
+					<View style={{width:56}}/>
 				</View>
+
 			</View>
 		)
 	}
@@ -144,8 +185,6 @@ export default function UploadScreen({ navigation }) {
 			</View>
 
 			<View style={styles.tagsContainer}>
-
-				{/* Category — single select */}
 				<Text style={styles.sectionLabel}>Category <Text style={styles.required}>*</Text></Text>
 				<View style={styles.chipRow}>
 					{CATEGORIES.map(cat => (
@@ -222,6 +261,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     justifyContent: 'flex-end',
   },
+  topBar: {
+	position: 'absolute',
+	top: 56,
+	left: 20,
+	right: 20,
+	flexDirection: 'row',
+	justifyContent: 'space-between',
+	zIndex: 10,
+  },
+  permissionScreen: {
+	flex: 1,
+	background: '#000',
+	alignItems: 'center',
+	justifyContent: 'center',
+	padding: '32',
+  },
+  permissionText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  permissionBtn: {
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  permissionBtnText: {
+    color: '#000',
+    fontWeight: '600',
+    fontSize: 15,
+  },
   closeBtn: {
     position: 'absolute',
     top: 56,
@@ -243,6 +315,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  galleryThumbImage:{
+	width: '100%',
+	height: '100%',
+	borderRadius: radius.sm,
   },
   shutter: {
     width: 72,
