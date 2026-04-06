@@ -137,7 +137,7 @@ export default function UploadScreen({ navigation }) {
 			<View style={styles.permissionScreen}>
 				<Text style={styles.permissionText}>Camera Access is needed to take photos of your clothes</Text>
 				<TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-					<Text style={style.permissionBtnText}>Grant Permission</Text>
+					<Text style={styles.permissionBtnText}>Grant Permission</Text>
 				</TouchableOpacity>
 			</View>
 		)

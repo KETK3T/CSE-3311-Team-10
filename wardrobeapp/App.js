@@ -18,6 +18,8 @@ import UploadScreen from './src/screens/main/UploadScreen'
 import SocialScreenFeed from './src/screens/main/SocialScreenFeed'
 import ProfileScreen from './src/screens/main/ProfileScreen'
 
+import UploadPost from './src/screens/Social/UploadPost';
+
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from './src/backend/supabase-client'
 
@@ -25,7 +27,16 @@ const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
 
 SplashScreen.preventAutoHideAsync()
-
+const SocialStack = createNativeStackNavigator()
+function SocialNavigator(){
+  return(
+    <SocialStack.Navigator screenOptions={{headerShown:false}}>
+      <SocialStack.Screen name='SocialScreenFeed' component={SocialScreenFeed}/>
+      <SocialStack.Screen name='UploadPost' component={UploadPost} options={{headerShown:true, title:'Post Anything !',headerStyle:{backgroundColor:'#000'},headerTintColor:'#fff'}}
+      />
+      </SocialStack.Navigator>
+  );
+}
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -50,7 +61,7 @@ function MainTabs() {
       <Tab.Screen name="Wardrobe" component={WardrobeScreen} />
       <Tab.Screen name="Mixer" component={MixerScreen} />
       <Tab.Screen name="Upload" component={UploadScreen} />
-      <Tab.Screen name="Social" component={SocialScreenFeed} />
+      <Tab.Screen name="Social" component={SocialNavigator} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   )
