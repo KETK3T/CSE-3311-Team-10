@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { colors, spacing, radius } from '../../theme'
 import { register } from '../../backend/auth'
 
+
+
 export default function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,9 +17,18 @@ export default function RegisterScreen({ navigation }) {
   const [username,setUsername] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const isValidEmail = (email) =>{
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase())
+  }
+
   const handleCreateAccount = async () => {
     if(!email || !password || !username){
       Alert.alert("MISSING INFO","Please fill in all fields.")
+      return
+    }
+
+    if(!isValidEmail(email)){
+      Alert.alert('Invalid Email', 'please enter a valid email address.')
       return
     }
 
@@ -27,12 +38,23 @@ export default function RegisterScreen({ navigation }) {
     }
 
     if(password.length < 4){
-      Alert.alert('Password Length',"Password must be at least 4 characters.")
+      Alert.alert('Password Too short',"Password must be at least 4 characters.")
       return
     }
 
+    if(username.trim().length < 3){
+      Alert.alert('Invalid Username',"Username must be at least 3 characters")
+      return
+    }
+
+    if(!/^[a-z0-9._]+$/.test(username.trim().toLowerCase())){
+      Alert.alert('Invalid Username',"Only letters, numbers, dots and underscores allowed")
+      return
+    }
+
+
     setLoading(true)
-    const {user,error} = await register(email,password,username)
+    const {user,error} = await register(email,password,username.toLowerCase())
     setLoading(false)
 
     if(error){
@@ -40,7 +62,6 @@ export default function RegisterScreen({ navigation }) {
       return
     }
 
-    navigation.replace('Main')
   }
 
   return (

@@ -13,9 +13,19 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('')
   const [loading,setLoading] = useState(false)
 
+
+  const isValidEmail = (email) =>{
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase())
+  }
+
   const handleSignIn = async () => {
     if(!email || !password){
       Alert.alert("MISSING INFO", "Please enter your email and password.")
+      return
+    }
+
+    if(!isValidEmail(email)){
+      Alert.alert('Invalid Email', 'please enter a valid emnail address.')
       return
     }
 
@@ -27,7 +37,6 @@ export default function LoginScreen({ navigation }) {
       Alert.alert('Failed To Login', error)
       return
     }
-    navigation.replace('Main')
   }
 
   return (
@@ -64,7 +73,7 @@ export default function LoginScreen({ navigation }) {
             secureTextEntry
           />
 
-          <TouchableOpacity style={[styles.signInBtn, loading && {opacity: 0.6}]} onPress={handleSignIn} dsiabled={loading} activeOpacity={0.85}>
+          <TouchableOpacity style={[styles.signInBtn, loading && {opacity: 0.6}]} onPress={handleSignIn} disabled={loading} activeOpacity={0.85}>
             <Text style={styles.signInText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>

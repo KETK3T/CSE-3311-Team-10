@@ -10,10 +10,19 @@ import { resetPassword } from '../../backend/auth'
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('')
+  
+  const isValidEmail = (email) =>{
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase())
+  }
 
   const handleReset = async () => {
     if(!email){
       Alert.alert('MISSING INFO', "Please enter your email.")
+      return
+    }
+
+    if(!isValidEmail(email)){
+      Alert.alert('Invalid Email', 'please enter a valid email address.')
       return
     }
 
@@ -55,8 +64,8 @@ export default function ForgotPasswordScreen({ navigation }) {
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.resetBtn} onPress={handleReset} activeOpacity={0.85}>
-              <Text style={styles.resetText}>Reset Password</Text>
+            <TouchableOpacity style={[styles.resetBtn, loading && {opacity: 0.6}]} onPress={handleReset} activeOpacity={0.85} disabled={loading}>
+              <Text style={styles.resetText}>{loading ? 'Sending...': 'Reset Password'}</Text>
             </TouchableOpacity>
           </View>
         </View>
