@@ -167,7 +167,7 @@ export default function WardrobeScreen({navigation}) {
 
 
 const styles = StyleSheet.create({
-  safe: { flex: 0, backgroundColor: colors.background, justifyContent: 'flex-start', height: 'auto' },
+  safe: { flex: 0, backgroundColor: colors.backgroundColor, justifyContent: 'flex-start', height: 'auto' },
   title: {
     fontSize: 28,
     fontWeight: '400',

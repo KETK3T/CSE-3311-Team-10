@@ -4,6 +4,7 @@ export const colors = {
   black: '#1A1A1A',
   white: '#FFFFFF',
   background: '#F9F9F9',
+  backgroundColor: '#f7f6fa',
   card: '#FFFFFF',
   border: '#E0E0E0',
   inputBg: '#F5F5F5',

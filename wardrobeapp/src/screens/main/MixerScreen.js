@@ -213,7 +213,10 @@ export default function MixerScreen({navigation, route}) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { 
+    flex: 1, 
+    backgroundColor: colors.backgroundColor,
+  },
   header: {
     alignItems: 'center',
     paddingTop: spacing.md,

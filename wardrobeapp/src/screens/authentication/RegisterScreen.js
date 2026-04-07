@@ -80,7 +80,7 @@ export default function RegisterScreen({ navigation }) {
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
-            placeholder="Value"
+            placeholder="Email ID"
             placeholderTextColor={colors.placeholder}
             value={email}
             onChangeText={setEmail}
@@ -91,7 +91,7 @@ export default function RegisterScreen({ navigation }) {
           <Text style={styles.label}>Username</Text>
           <TextInput
             style={styles.input}
-            placeholder="Value"
+            placeholder="Username"
             placeholderTextColor={colors.placeholder}
             value={username}
             onChangeText={setUsername}
@@ -101,7 +101,7 @@ export default function RegisterScreen({ navigation }) {
           <Text style={[styles.label, { marginTop: spacing.md }]}>Password</Text>
           <TextInput
             style={styles.input}
-            placeholder="Value"
+            placeholder="Password"
             placeholderTextColor={colors.placeholder}
             value={password}
             onChangeText={setPassword}
@@ -111,7 +111,7 @@ export default function RegisterScreen({ navigation }) {
           <Text style={[styles.label, { marginTop: spacing.md }]}>Confirm Password</Text>
           <TextInput
             style={styles.input}
-            placeholder="Value"
+            placeholder="Confirm Password"
             placeholderTextColor={colors.placeholder}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
@@ -173,14 +173,14 @@ const styles = StyleSheet.create({
     color: colors.textDark,
   },
   createBtn: {
-    backgroundColor: colors.textDark,
+    backgroundColor: colors.primary,
     borderRadius: radius.sm,
     paddingVertical: spacing.md - 2,
     alignItems: 'center',
     marginTop: spacing.lg,
   },
   createText: {
-    color: colors.white,
+    color: colors.black,
     fontSize: 16,
     fontWeight: '600',
   },

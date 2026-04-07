@@ -321,7 +321,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.white },
+  safe: { flex: 1, backgroundColor: colors.backgroundColor },
   loadingContainer: {flex: 1, alignItems: 'center', justifyContent: 'center'},
   logoutBtn:{
     position: 'absolute',

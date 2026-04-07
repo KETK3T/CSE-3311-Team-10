@@ -2,6 +2,9 @@ import React, {useState} from 'react'
 import { View, Image, Text, StyleSheet, TouchableOpacity,Modal,Pressable } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { colors, radius,spacing} from '../theme'
+import TopIcon from '../../assets/tops-icon.png';
+import BotIcon from '../../assets/bottoms-icon.png';
+import OuterIcon from '../../assets/outerwear-icon.png';
 
 const CATEGORY_COLORS = {
   Tops: '#F9A8D4',
@@ -41,7 +44,10 @@ export default function ClothingCard({
 
   {showCategory && (   
     <View style={[styles.banner, { backgroundColor: bannerColor }]}>
-      <Text style={styles.bannerText}>{category.toUpperCase()}</Text>
+          <Image source={category.toUpperCase() === 'TOPS' ? TopIcon : category.toUpperCase() === 'BOTTOMS' ? BotIcon : OuterIcon} 
+                  style={styles.categoryIcon} />
+      <Text style={styles.bannerText}>{category.toUpperCase()}</Text>  
+          
       <TouchableOpacity onPress={onFavorite} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         <Ionicons
           name={isFavorite ? 'star' : 'star-outline'}
@@ -124,12 +130,14 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
   banner: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    backgroundColor: colors.labelBg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -175,5 +183,11 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginHorizontal: spacing.md,
+  },
+  categoryIcon: {
+    width: 30,
+    height: 30,
+    resizeMode: 'cover',
+    alignContent: 'left',
   },
 })
