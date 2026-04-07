@@ -20,28 +20,39 @@ export default function ClothingCard({
   onDelete,
   onAddToMixer,
   style,
+  showCategory = true,
 }) {
   const [menuVisible, setMenuVisible] = useState(false)
   const bannerColor = CATEGORY_COLORS[category] || CATEGORY_COLORS.default
   return (
     <>
-      <TouchableOpacity style={[styles.card, style]} onPress={onPress} onLongPress={() => setMenuVisible(true)} activeOpacity={0.85} delayLongPress={400}>
-        <Image
-          source={imageUri ? { uri: imageUri } : require('../../assets/Placeholder.jpeg')}
-          style={styles.image}
-          resizeMode="cover"
+<TouchableOpacity
+  style={[styles.card, style]}
+  onPress={onPress}
+  onLongPress={() => setMenuVisible(true)}
+  activeOpacity={0.85}
+  delayLongPress={400}
+>
+  <Image
+    source={imageUri ? { uri: imageUri } : require('../../assets/Placeholder.jpeg')}
+    style={styles.image}
+    resizeMode="cover"
+  />
+
+  {showCategory && (   
+    <View style={[styles.banner, { backgroundColor: bannerColor }]}>
+      <Text style={styles.bannerText}>{category.toUpperCase()}</Text>
+      <TouchableOpacity onPress={onFavorite} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Ionicons
+          name={isFavorite ? 'star' : 'star-outline'}
+          size={16}
+          color="#fff"
         />
-        <View style={[styles.banner, { backgroundColor: bannerColor }]}>
-          <Text style={styles.bannerText}>{category.toUpperCase()}</Text>
-          <TouchableOpacity onPress={onFavorite} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons
-              name={isFavorite ? 'star' : 'star-outline'}
-              size={16}
-              color="#fff"
-            />
-          </TouchableOpacity>
-        </View>
       </TouchableOpacity>
+    </View>
+  )}
+
+</TouchableOpacity>
 
       <Modal
         visible={menuVisible}

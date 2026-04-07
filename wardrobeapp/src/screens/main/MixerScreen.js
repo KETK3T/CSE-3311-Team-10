@@ -32,7 +32,7 @@ export default function MixerScreen({navigation, route}) {
   }
 
   const { width } = useWindowDimensions()
-  const cardWidth = width - 120
+  const cardWidth = width - 200
 
 
   useEffect(() => {
@@ -175,8 +175,9 @@ export default function MixerScreen({navigation, route}) {
                 )
               }
             return(
+              <View key={cat} style={{ overflow: 'hidden', width: cardWidth, alignSelf: 'center' }}>
               <FlatList
-                key={cat}
+                //key={cat}
                 ref={flatListRefs[cat]}
                 data={items}
                 keyExtractor={item => item.id}
@@ -191,10 +192,12 @@ export default function MixerScreen({navigation, route}) {
                     <ClothingCard
                       imageUri={item.image_url}
                       category={item.category}
+                      showCategory={false}
                     />
                   </View>
                 )}
               />
+              </View>
               )
             })}
           </View>
