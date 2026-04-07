@@ -3,12 +3,9 @@ import { ScrollView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
 import { supabase } from '../../backend/supabase-client'; // Import your client
-<<<<<<< HEAD
 import { getUsername } from '../../backend/profileService';
 
-=======
 import { useAuth } from '../../backend/useAuth'
->>>>>>> feature/social-feed
 
 export default function SocialScreenFeed({ navigation }){
   const {user} = useAuth(); 
