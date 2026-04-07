@@ -68,7 +68,7 @@ export const getUsername = async(userId) => {
 		.select('username')
 		.eq('id',userId)
 		.single()
-		return { username: data?.username || [], error: error?.message || null}
+		return { username: data?.username || null, error: error?.message || null}
 }
 
 export const getItemCount = async(userId) => {
