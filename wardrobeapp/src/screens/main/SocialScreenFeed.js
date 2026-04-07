@@ -3,11 +3,6 @@ import { ScrollView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
 import { supabase } from '../../backend/supabase-client'; // Import your client
-<<<<<<< Updated upstream
-import { getUsername } from '../../backend/profileService';
-
-=======
->>>>>>> Stashed changes
 import { useAuth } from '../../backend/useAuth'
 
 export default function SocialScreenFeed({ navigation }){
