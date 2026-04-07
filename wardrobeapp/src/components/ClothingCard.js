@@ -37,7 +37,7 @@ export default function ClothingCard({
   delayLongPress={400}
 >
   <Image
-    source={imageUri ? { uri: imageUri } : require('../../assets/Placeholder.jpeg')}
+    source={imageUri ? { uri: imageUri } : require('../../assets/wardrobe-logo.png')}
     style={styles.image}
     resizeMode="cover"
   />
