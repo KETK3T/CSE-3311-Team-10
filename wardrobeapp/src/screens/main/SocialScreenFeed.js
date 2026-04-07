@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
 import { supabase } from '../../backend/supabase-client'; // Import your client
+import { getUsername } from '../../backend/profileService';
+
 
 export default function SocialScreenFeed({ navigation }) {
   const [realPosts, setRealPosts] = useState([]);

@@ -25,7 +25,7 @@ export default function LoginScreen({ navigation }) {
     }
 
     if(!isValidEmail(email)){
-      Alert.alert('Invalid Email', 'please enter a valid emnail address.')
+      Alert.alert('Invalid Email', 'please enter a valid email address.')
       return
     }
 

@@ -62,6 +62,15 @@ export const uploadAvatar = async (userId, uri) => {
 	return urlData.publicUrl
 }
 
+export const getUsername = async(userId) => {
+	const {data ,error} = await supabase
+		.from('profiles')
+		.select('username')
+		.eq('id',userId)
+		.single()
+		return { username: data?.username || [], error: error?.message || null}
+}
+
 export const getItemCount = async(userId) => {
 	const {count, error} = await supabase
 		.from('clothing_items')
