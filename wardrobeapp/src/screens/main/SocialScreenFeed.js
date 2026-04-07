@@ -3,19 +3,24 @@ import { ScrollView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
 import { supabase } from '../../backend/supabase-client'; // Import your client
+<<<<<<< HEAD
 import { getUsername } from '../../backend/profileService';
 
+=======
+import { useAuth } from '../../backend/useAuth'
+>>>>>>> feature/social-feed
 
-export default function SocialScreenFeed({ navigation }) {
+export default function SocialScreenFeed({ navigation }){
+  const {user} = useAuth(); 
   const [realPosts, setRealPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Function to pull the real data you just uploaded
-  const fetchRealPosts = async () => {
+  // 1. Function to pull the real data just uploaded
+  const fetchRealPosts = async ()=>{
     try {
-      const { data, error } = await supabase
+      const{data,error}=await supabase
         .from('social_posts')
-        .select('*')
+        .select('*,profiles(username)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -39,7 +44,7 @@ export default function SocialScreenFeed({ navigation }) {
           SOCIAL SECTION
         </Text>
 
-        {/* --- TEST POSTS (Keeping these as requested) --- */}
+        {/* --- TEST POSTS --- */}
         <SocialPostCard 
           username="smarty_antha" 
           postImage="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800" 
@@ -51,15 +56,15 @@ export default function SocialScreenFeed({ navigation }) {
         />
 
         {/* --- LIVE POSTS FROM SUPABASE --- */}
-        <Text style={styles.sectionHeader}>Live Community Fits</Text>
+        <Text style={styles.sectionHeader}>Live Community Postss</Text>
         
-        {loading ? (
-          <ActivityIndicator color="white" style={{ marginTop: 20 }} />
+        {loading? (
+          <ActivityIndicator color="white" style={{marginTop:20}} />
         ) : (
           realPosts.map((post) => (
             <SocialPostCard 
               key={post.id}
-              username={`User_${post.user_id.slice(0, 5)}`} 
+              username={post.profiles?.username ||`User_${post.user_id.slice(0, 5)}`}
               postImage={post.image_url} 
               caption={post.caption}
             />
