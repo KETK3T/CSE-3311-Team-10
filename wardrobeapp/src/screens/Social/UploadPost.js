@@ -16,7 +16,7 @@ export default function UploadPost({ navigation }) {
   // Function to let us pick a photo from the gallery
   const handlePickPhoto = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes:'Images',
       allowsEditing: true,
       aspect: [4, 5], 
       quality: 0.6, // Slight compression to keep the DB fast
