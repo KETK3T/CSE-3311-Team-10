@@ -1,25 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, FlatList, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../backend/supabase-client'; // Import your client
 import { useAuth } from '../../backend/useAuth'
 
+const {height} = Dimensions.get('window')
+
+// const MemoizedPostCard = memo(({item, user, navigation}) => (
+//   <SocialPostCard
+//     postId={item.id}
+//     userId={item.user_id}
+//     username={item.profiles?.username || `user_${item.user_id.slice(0, 5)}`}
+//     avatarUrl={item.profiles?.avatar_url}
+//     postImage={item.image_url}
+//     caption={item.caption}
+//     linkedItemIds={item.linked_item_ids || []}
+//     currentUserId={user?.id}
+//     navigation={navigation}
+//   />
+// ))
+
+
 export default function SocialScreenFeed({ navigation }){
   const {user} = useAuth(); 
-  const [realPosts, setRealPosts] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() =>{
+    fetchPosts()
+  }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      if (loading) return
+      syncPosts()
+    }, [loading])
+  )
+
   // 1. Function to pull the real data just uploaded
-  const fetchRealPosts = async ()=>{
+  const fetchPosts = async ()=>{
+    setLoading(true)
     try {
       const{data,error}=await supabase
         .from('social_posts')
-        .select('*,profiles(username)')
-        .order('created_at', { ascending: false });
+        .select('*,profiles(username, avatar_url)')
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setRealPosts(data || []);
+      setPosts(data || []);
     } catch (err) {
       console.log("Fetch Error:", err.message);
     } finally {
@@ -27,49 +57,90 @@ export default function SocialScreenFeed({ navigation }){
     }
   };
 
-  // 2. Run it when the screen opens
-  useEffect(() => {
-    fetchRealPosts();
-  }, []);
+  const syncPosts = async() => {
+    try{
+      const {data, error} = await supabase
+        .from('social_posts')
+        .select('*, profiles(username, avatar_url)')
+        .order('created_at', { ascending: false })
+        if (error) return
+        setPosts(prev => {
+          const prevIds = prev.map(p => p.id).join()
+          const nextIds = (data || []).map(p => p.id).join()
+          return prevIds !== nextIds ? data : prev
+        })
+    } catch (err) {
+        console.log('Sync error:', err.message)
+    }
+  }
+
+  const renderItem = useCallback(({item}) => (
+    <SocialPostCard
+      postId={item.id}
+      userId={item.user_id}
+      username={item.profiles?.username || `user_${item.user_id.slice(0, 5)}`}
+      avatarUrl={item.profiles?.avatar_url}
+      postImage={item.image_url}
+      caption={item.caption}
+      linkedItemIds={item.linked_item_ids || []}
+      currentUserId={user?.id}
+      navigation={navigation}
+    />
+  ), [user,navigation])
+  
+  const keyExtractor = useCallback((item) => item.id,[])
+  
+  const getItemLayout = useCallback((_, index) => ({
+    length: height,
+    offset: height * index,
+  }),[])
+
+  if (loading){
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color="White" size="large"/>
+      </View>
+    )
+  }
+
+  if (posts.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.emptyText}>No posts yet</Text>
+        <Text style={styles.emptySubText}>Be the first to share your fit!</Text>
+        <TouchableOpacity
+          style={styles.uploadTrigger}
+          onPress={() => navigation.navigate('UploadPost')}
+        >
+          <Ionicons name="add" size={35} color="black" />
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  
 
   return (
     <View style={styles.container}>
-      <ScrollView style={{ flex: 1, backgroundColor: '#000' }}>
-        <Text style={{ color: 'white', fontSize: 50, marginTop: 100 }}>
-          SOCIAL SECTION
-        </Text>
+      <FlatList
+        data={posts}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        pagingEnabled
+        snapToInterval={height}
+        snapToAlignment="start"
+        decelerationRate={0.999}
+        showsVerticalScrollIndicator={false}
+        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+        getItemLayout={getItemLayout}
+        maxToRenderPerBatch={2}
+        windowSize={3}
+        initialNumToRender={1}
+        removeClippedSubviews={true}
+        snapToOffsets={posts.map((_,i) => i * height)}
+      />
 
-        {/* --- TEST POSTS --- */}
-        <SocialPostCard 
-          username="smarty_antha" 
-          postImage="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800" 
-        />
-        
-        <SocialPostCard 
-          username="uta_student" 
-          postImage="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800" 
-        />
-
-        {/* --- LIVE POSTS FROM SUPABASE --- */}
-        <Text style={styles.sectionHeader}>Live Community Postss</Text>
-        
-        {loading? (
-          <ActivityIndicator color="white" style={{marginTop:20}} />
-        ) : (
-          realPosts.map((post) => (
-            <SocialPostCard 
-              key={post.id}
-              username={post.profiles?.username ||`User_${post.user_id.slice(0, 5)}`}
-              postImage={post.image_url} 
-              caption={post.caption}
-            />
-          ))
-        )}
-
-        <View style={{ height: 100 }} /> 
-      </ScrollView>
-
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.uploadTrigger}
         onPress={() => navigation.navigate('UploadPost')}
       >
@@ -84,15 +155,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  sectionHeader: {
-    color: '#7C5CBF', // Using your UTA Smart Closet theme color
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 15,
-    marginTop: 30,
-    marginBottom: 10,
-    textTransform: 'uppercase',
+  centered: {
+    flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  emptyText:{color:'#fff', fontSize: 18, fontWeight:'600'},
+  emptySubText: {color:'#666', fontSize: 14, marginTop: 8},  
   uploadTrigger: {
     position: 'absolute',
     bottom: 30,
@@ -104,5 +174,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
-  }
+  },
 });

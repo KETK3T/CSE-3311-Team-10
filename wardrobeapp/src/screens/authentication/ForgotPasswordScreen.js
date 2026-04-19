@@ -7,10 +7,12 @@ import {SafeAreaView} from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { colors, spacing, radius } from '../../theme'
 import { resetPassword } from '../../backend/auth'
+  
+
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('')
-  
+  const [loading,setLoading] = useState(false)
   const isValidEmail = (email) =>{
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase())
   }

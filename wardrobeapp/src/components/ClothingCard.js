@@ -18,10 +18,13 @@ export default function ClothingCard({
   imageUri,
   category = 'TOPS',
   isFavorite = false,
+  isPrivate = false,
   onPress,
   onFavorite,
   onDelete,
   onAddToMixer,
+  onTogglePrivate,
+  isOwner = true,
   style,
   showCategory = true,
 }) {
@@ -32,7 +35,7 @@ export default function ClothingCard({
 <TouchableOpacity
   style={[styles.card, style]}
   onPress={onPress}
-  onLongPress={() => setMenuVisible(true)}
+  onLongPress={isOwner ? () => setMenuVisible(true) : null}
   activeOpacity={0.85}
   delayLongPress={400}
 >
@@ -47,7 +50,11 @@ export default function ClothingCard({
           <Image source={category.toUpperCase() === 'TOPS' ? TopIcon : category.toUpperCase() === 'BOTTOMS' ? BotIcon : OuterIcon} 
                   style={styles.categoryIcon} />
       <Text style={styles.bannerText}>{category.toUpperCase()}</Text>  
-          
+      <View style={styles.bannerRight}>
+        {isPrivate && (
+          <Ionicons name="lock-closed" size={12} color='#fff' style={{marginRight: 6}}/>
+        )}
+      </View>
       <TouchableOpacity onPress={onFavorite} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         <Ionicons
           name={isFavorite ? 'star' : 'star-outline'}
@@ -97,6 +104,18 @@ export default function ClothingCard({
           >
             <Ionicons  name="shuffle-outline" size={22} color={colors.textDark} />
             <Text style={styles.menuText}>Add to Mixer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+          style={styles.menuItem}
+            onPress={() => {
+              onTogglePrivate?.()
+              setMenuVisible(false)
+            }}
+          >
+            <Ionicons name={isPrivate ? 'lock-open-outline' : 'lock-closed-outline'} size={22} color={colors.textDark}/>
+            <Text style={styles.menuText}>
+                {isPrivate ? 'Make Public' : 'Make Private'}
+              </Text>
           </TouchableOpacity>
           <View styles={styles.divider}/>
           <TouchableOpacity
@@ -189,5 +208,9 @@ const styles = StyleSheet.create({
     height: 30,
     resizeMode: 'cover',
     alignContent: 'left',
+  },
+  bannerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 })

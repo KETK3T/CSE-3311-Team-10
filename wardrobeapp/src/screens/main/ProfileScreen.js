@@ -8,9 +8,10 @@ import { colors, spacing, radius } from '../../theme'
 import { useAuth } from '../../backend/useAuth'
 import { useFocusEffect } from '@react-navigation/native'
 import { getAllFavorites, toggleFavorite, deleteClothingItem } from '../../backend/wardrobeService'
+import { getUserPosts, deletePost, getFollowerCount,getFollowingCount } from '../../backend/socialService'
 import { logout } from '../../backend/auth'
 import { checkUsernameAvailable, getItemCount, getProfile, updateProfile, uploadAvatar } from '../../backend/profileService'
-
+import { KeyboardAvoidingView, Platform } from 'react-native'
 
 export default function ProfileScreen() {
   const {user} = useAuth()
@@ -23,7 +24,10 @@ export default function ProfileScreen() {
   const [editUsername, setEditUsername] = useState('')
   const [editAvatar, setEditAvatar] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
-
+  const [posts, setPosts] = useState([])
+  const [activeTab, setActiveTab] = useState('favorites')
+  const [followerCount, setFollowerCount] = useState(0)
+  const [followingCount,setFollowingCount] = useState(0)
 
   useEffect(() => {
     if(!user?.id) return
@@ -36,10 +40,17 @@ export default function ProfileScreen() {
       const{profile: profileData} = await getProfile(user.id)
       const{items} = await getAllFavorites(user.id)
       const {count} = await getItemCount(user.id)
+      const {posts: postsData} = await getUserPosts(user.id)
+      const followers = await getFollowerCount(user.id)
+      const following = await getFollowingCount(user.id)
+
 
       setProfile(profileData)
       setFavorites(items)
       setItemCount(count)
+      setPosts(postsData)
+      setFollowerCount(followers)
+      setFollowingCount(following)
     }catch(e){
       Alert.alert('PROFILE ERROR', e.message)
     }
@@ -54,7 +65,9 @@ export default function ProfileScreen() {
           const{profile: profileData} = await getProfile(user.id)
           const{items} = await getAllFavorites(user.id)
           const {count} = await getItemCount(user.id)
-
+          const {posts: postsData} = await getUserPosts(user.id)
+          const followers = await getFollowerCount(user.id)
+          const following = await getFollowingCount(user.id)
           setProfile(prev => 
             JSON.stringify(prev) !== JSON.stringify(profileData) ? profileData : prev
           )
@@ -64,6 +77,14 @@ export default function ProfileScreen() {
             return prevIds !== nextIds ? items : prev
           })
           setItemCount(prev => prev !== count ? count : prev)
+          setPosts(prev => {
+            const prevIds = prev.map(p => p.id).join()
+            const nextIds = postsData.map(p => p.id).join()
+            return prevIds !== nextIds ? postsData : prev
+          })
+          setFollowerCount(prev => prev !== followers ? followers : prev)
+          setFollowingCount(prev => prev !== following ? following : prev)
+
         }catch(e){
           console.log('sync Error', e.message)
         }
@@ -71,6 +92,25 @@ export default function ProfileScreen() {
       syncProfile()
     }, [user?.id, loading])
   )
+
+  const handleDeletePost = (id) => {
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post? It cannot be undone',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            const {error} = await deletePost(id)
+            if(!error){
+              setPosts(prev => prev.filter(p => p.id !== id))
+            }
+          }
+        }
+
+      ]
+    )
+  }
 
   const handleSaveProfile = async () => {
     const trimmed = editUsername.trim().toLowerCase()
@@ -233,6 +273,14 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Items</Text>
           </View>
           <View style={styles.stat}>
+            <Text style={styles.statValue}>{followerCount}</Text>
+            <Text style={styles.statLabel}>Followers</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>{followingCount}</Text>
+            <Text style={styles.statLabel}>Following</Text>
+          </View>
+          <View style={styles.stat}>
             <Text style={styles.statValue}>{favorites.length}</Text>
             <Text style={styles.statLabel}>Favorites</Text>
           </View>
@@ -244,76 +292,130 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.divider}/>
-        <Text style={styles.sectionTitle}>Favorites</Text>
+        {/* Tabs */}
+        <View style={styles.tabRow}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'favorites' && styles.tabActive]}
+            onPress={() => setActiveTab('favorites')}
+          >
+            <Ionicons
+              name="star-outline"
+              size={22}
+              color={activeTab === 'favorites' ? colors.textDark : colors.textMid}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'posts' && styles.tabActive]}
+            onPress={() => setActiveTab('posts')}
+          >
+            <Ionicons
+              name="albums-outline"
+              size={22}
+              color={activeTab === 'posts' ? colors.textDark : colors.textMid}
+            />
+          </TouchableOpacity>
+        </View>
 
-        {favorites.length===0? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No favorites yet!!! </Text>
-            <Text style={styles.emptySubText}>Hit the star in in wardrobe to add an item</Text>
-          </View>
-        ) : (
-          <View style={styles.grid}>
-            {favorites.map(item => (
-              <View key={item.id} style={styles.cardWrapper}>
-                <ClothingCard 
-                  imageUri={item.image_url}
-                  category={item.category}
-                  isFavorite={item.is_favorite}
-                  onFavorite={() => handleToggleFavorite(item.id, item.is_favorite)}
-                  onDelete={() => handleDelete(item.id)}
-                />
-              </View>
-            ))}
-          </View>
+        <View style={styles.divider} />
+
+        {/* Favorites tab */}
+        {activeTab === 'favorites' && (
+          favorites.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No favorites yet!</Text>
+              <Text style={styles.emptySubText}>Hit the star in wardrobe to add an item</Text>
+            </View>
+          ) : (
+            <View style={styles.grid}>
+              {favorites.map(item => (
+                <View key={item.id} style={styles.cardWrapper}>
+                  <ClothingCard
+                    imageUri={item.image_url}
+                    category={item.category}
+                    isFavorite={item.is_favorite}
+                    onFavorite={() => handleToggleFavorite(item.id, item.is_favorite)}
+                    onDelete={() => handleDelete(item.id)}
+                  />
+                </View>
+              ))}
+            </View>
+          )
+        )}
+
+        {/* Posts tab */}
+        {activeTab === 'posts' && (
+          posts.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No posts yet!</Text>
+              <Text style={styles.emptySubText}>Share your fits to the feed!</Text>
+            </View>
+          ) : (
+            <View style={styles.grid}>
+              {posts.map(post => (
+                <TouchableOpacity
+                  key={post.id}
+                  style={styles.cardWrapper}
+                  onLongPress={() => handleDeletePost(post.id)}
+                  delayLongPress={400}
+                >
+                  <Image
+                    source={{ uri: post.image_url }}
+                    style={styles.postThumb}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )
         )}
       </ScrollView>
       <Modal visible={editVisible} transparent animationType='slide' onRequestClose={() => setEditVisible(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setEditVisible(false)}>
-          <Pressable style={styles.modalSheet} onPress={e => e.stopPropagation()}>
-
-            <TouchableOpacity style={styles.modalAvatarWrapper} onPress={pickAvatar}>
-              {editAvatar || profile?.avatar_url ? (
-                <Image source={{ uri: editAvatar || profile.avatar_url }} style={styles.modalAvatarImg} />
-              ) : (
-                <View style={styles.modalAvatarCircle}>
-                  <Ionicons name='person' size={40} color={colors.textMid} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <Pressable style={styles.modalSheet} onPress={e => e.stopPropagation()}>
+              <TouchableOpacity style={styles.modalAvatarWrapper} onPress={pickAvatar}>
+                {editAvatar || profile?.avatar_url ? (
+                  <Image source={{ uri: editAvatar || profile.avatar_url }} style={styles.modalAvatarImg} />
+                ) : (
+                  <View style={styles.modalAvatarCircle}>
+                    <Ionicons name='person' size={40} color={colors.textMid} />
+                  </View>
+                )}
+                <View style={styles.cameraBadge}>
+                  <Ionicons name='camera' size={14} color="#fff" />
                 </View>
-              )}
-              <View style={styles.cameraBadge}>
-                <Ionicons name='camera' size={14} color="#fff" />
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <Text style={styles.modalTitle}>Edit Profile</Text>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
 
-            <Text style={styles.inputLabel}>Username</Text>
-            <TextInput
-              style={styles.input}
-              value={editUsername}
-              onChangeText={setEditUsername}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder='your_username'
-              placeholderTextColor={colors.textLight}
-            />
+              <Text style={styles.inputLabel}>Username</Text>
+              <TextInput
+                style={styles.input}
+                value={editUsername}
+                onChangeText={setEditUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder='your_username'
+                placeholderTextColor={colors.textLight}
+              />
 
-            <TouchableOpacity
-              style={[styles.saveBtn, isSaving && { opacity: 0.6 }]}
-              onPress={handleSaveProfile}
-              disabled={isSaving}
-            >
-              {isSaving
-                ? <ActivityIndicator color={colors.white} />
-                : <Text style={styles.saveBtnText}>Save</Text>
-              }
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveBtn, isSaving && { opacity: 0.6 }]}
+                onPress={handleSaveProfile}
+                disabled={isSaving}
+              >
+                {isSaving
+                  ? <ActivityIndicator color={colors.white} />
+                  : <Text style={styles.saveBtnText}>Save</Text>
+                }
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditVisible(false)}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditVisible(false)}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
 
-          </Pressable>
+            </Pressable>
+          </KeyboardAvoidingView>
         </Pressable>
       </Modal>
     </SafeAreaView>
@@ -453,4 +555,23 @@ const styles = StyleSheet.create({
   saveBtnText: { color: colors.white, fontSize: 15, fontWeight: '600' },
   cancelBtn: { paddingVertical: spacing.sm },
   cancelText: { fontSize: 14, color: colors.textMid },
+  tabRow: {
+    flexDirection: 'row',
+    marginTop: spacing.lg,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: colors.textDark,
+  },
+  postThumb: {
+    width: '100%',
+    height: 200,
+    borderRadius: radius.md,
+  },
 })

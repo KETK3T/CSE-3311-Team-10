@@ -38,7 +38,7 @@ export const addClothingItem = async (itemData) => {
 }
 
 export const deleteClothingItem = async(itemId) => {
-const { error } = await supabase
+	const { error } = await supabase
 		.from('clothing_items')
 		.delete()
 		.eq('id', itemId);
@@ -46,7 +46,7 @@ const { error } = await supabase
 }
 
 export const toggleFavorite = async (itemId, currentStatus) => {
-const { data, error } = await supabase
+	const { data, error } = await supabase
 		.from('clothing_items')
 		.update({ is_favorite: !currentStatus })
 		.eq('id', itemId)
@@ -56,11 +56,21 @@ const { data, error } = await supabase
 }
 
 export const getAllFavorites = async (userId) => {
-const { data, error } = await supabase
+	const { data, error } = await supabase
 		.from('clothing_items')
 		.select('*')
 		.eq('user_id', userId)
 		.eq('is_favorite', true)
 		.order('created_at', { ascending: false });
 	return { items: data || [], error: error?.message || null }
+}
+
+export const togglePrivate = async (itemId,currentStatus) => {
+	const { data, error } = await supabase
+		.from('clothing_items')
+		.update({ is_private: !currentStatus })
+		.eq('id', itemId)
+		.select()
+		.single()
+	return { item: data, error: error?.message || null }
 }

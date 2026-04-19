@@ -12,9 +12,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.Team10.wardrobeapp"
     },
     "android": {
+      "package": "com.Team10.wardrobeapp",
       "icon": "./assets/wardrobe-logo.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/wardrobe-logo.png",

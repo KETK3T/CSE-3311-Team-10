@@ -4,7 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context'
 import ClothingCard from '../../components/ClothingCard'
 import { colors, spacing, radius } from '../../theme'
 import {useFocusEffect} from '@react-navigation/native'
-import { getAllClothingItems, toggleFavorite, deleteClothingItem } from '../../backend/wardrobeService'
+import { getAllClothingItems, toggleFavorite, deleteClothingItem, togglePrivate } from '../../backend/wardrobeService'
 import { useAuth } from '../../backend/useAuth'
 
 
@@ -67,6 +67,14 @@ export default function WardrobeScreen({navigation}) {
     }
   }
 
+
+  const handleTogglePrivate = async (id, currentStatus) => {
+    const {item, error} = await togglePrivate(id, currentStatus)
+    if(!error){
+      setItems(prev =>prev.map(i => i.id === id ? {...i, is_private: item.is_private} : i))
+    }
+  }
+
   const handleDelete = async (id) => {
     Alert.alert(
       'Delete Item',
@@ -93,8 +101,10 @@ export default function WardrobeScreen({navigation}) {
         imageUri={item.image_url}
         category={item.category}
         isFavorite={item.is_favorite}
+        isPrivate={item.is_private}
         onFavorite={() => handleToggleFavorite(item.id, item.is_favorite)}
         onDelete={() => handleDelete(item.id)}
+        onTogglePrivate={() => handleTogglePrivate(item.id, item.is_private)}
         onAddToMixer={() => navigation.jumpTo('Mixer', 
           {
             scrollTo: {category: item.category, id:item.id},
