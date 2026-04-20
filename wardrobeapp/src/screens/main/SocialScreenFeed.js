@@ -1,178 +1,161 @@
-import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, FlatList, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React,{useState,useEffect} from 'react';
+import {ScrollView,StyleSheet,View,Text,TouchableOpacity,ActivityIndicator} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
-import { useFocusEffect } from '@react-navigation/native';
-import { supabase } from '../../backend/supabase-client'; // Import your client
-import { useAuth } from '../../backend/useAuth'
+import {supabase} from '../../backend/supabase-client'; 
+import {useAuth} from '../../backend/useAuth';
 
-const {height} = Dimensions.get('window')
+export default function SocialScreenFeed({navigation}){
+  const {user}=useAuth(); 
+  const [realPosts,setRealPosts]=useState([]);
+  const [loading,setLoading]=useState(true);
 
-// const MemoizedPostCard = memo(({item, user, navigation}) => (
-//   <SocialPostCard
-//     postId={item.id}
-//     userId={item.user_id}
-//     username={item.profiles?.username || `user_${item.user_id.slice(0, 5)}`}
-//     avatarUrl={item.profiles?.avatar_url}
-//     postImage={item.image_url}
-//     caption={item.caption}
-//     linkedItemIds={item.linked_item_ids || []}
-//     currentUserId={user?.id}
-//     navigation={navigation}
-//   />
-// ))
-
-
-export default function SocialScreenFeed({ navigation }){
-  const {user} = useAuth(); 
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() =>{
-    fetchPosts()
-  }, [])
-
-  useFocusEffect(
-    useCallback(() => {
-      if (loading) return
-      syncPosts()
-    }, [loading])
-  )
-
-  // 1. Function to pull the real data just uploaded
-  const fetchPosts = async ()=>{
-    setLoading(true)
-    try {
-      const{data,error}=await supabase
+  const fetchRealPosts=async()=>{
+    try{
+      setLoading(true);
+      const {data,error}=await supabase
         .from('social_posts')
-        .select('*,profiles(username, avatar_url)')
-        .order('created_at', { ascending: true });
+        .select(`
+          *,
+          profiles(username),
+          post_likes(user_id),
+          post_comments(id)
+        `)
+        .order('created_at',{ascending:false});
 
-      if (error) throw error;
-      setPosts(data || []);
-    } catch (err) {
-      console.log("Fetch Error:", err.message);
-    } finally {
+      if(error) throw error;
+
+      const formattedPosts=data.map(post=>{
+        const likes=post.post_likes||[];
+        const comments=post.post_comments||[];
+        const hasLiked=user?likes.some(l=>l.user_id===user.id):false;
+        
+        return {
+          ...post,
+          likeCount:likes.length,
+          commentCount:comments.length,
+          isLikedByMe:hasLiked
+        };
+      });
+      setRealPosts(formattedPosts||[]);
+    }catch(err){
+      console.log("Fetch Error:",err.message);
+    }finally{
       setLoading(false);
     }
   };
 
-  const syncPosts = async() => {
+  const toggleLike=async(postId,currentlyLiked)=>{
+    if(!user) return;
+    setRealPosts(curr=>curr.map(p=>{
+      if(p.id===postId){
+        return {...p,isLikedByMe:!currentlyLiked,likeCount:currentlyLiked?Math.max(0,p.likeCount-1):p.likeCount+1};
+      }
+      return p;
+    }));
+
     try{
-      const {data, error} = await supabase
-        .from('social_posts')
-        .select('*, profiles(username, avatar_url)')
-        .order('created_at', { ascending: false })
-        if (error) return
-        setPosts(prev => {
-          const prevIds = prev.map(p => p.id).join()
-          const nextIds = (data || []).map(p => p.id).join()
-          return prevIds !== nextIds ? data : prev
-        })
-    } catch (err) {
-        console.log('Sync error:', err.message)
+      if(currentlyLiked){
+        const {error}=await supabase.from('post_likes').delete().match({post_id:postId,user_id:user.id});
+        if(error) throw error;
+      }else{
+        const {error}=await supabase.from('post_likes').insert([{post_id:postId,user_id:user.id}]);
+        if(error) throw error;
+      }
+    }catch(err){
+      console.log("Like error:",err.message);
+      fetchRealPosts();
     }
-  }
+  };
 
-  const renderItem = useCallback(({item}) => (
-    <SocialPostCard
-      postId={item.id}
-      userId={item.user_id}
-      username={item.profiles?.username || `user_${item.user_id.slice(0, 5)}`}
-      avatarUrl={item.profiles?.avatar_url}
-      postImage={item.image_url}
-      caption={item.caption}
-      linkedItemIds={item.linked_item_ids || []}
-      currentUserId={user?.id}
-      navigation={navigation}
-    />
-  ), [user,navigation])
-  
-  const keyExtractor = useCallback((item) => item.id,[])
-  
-  const getItemLayout = useCallback((_, index) => ({
-    length: height,
-    offset: height * index,
-  }),[])
-
-  if (loading){
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator color="White" size="large"/>
-      </View>
-    )
-  }
-
-  if (posts.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.emptyText}>No posts yet</Text>
-        <Text style={styles.emptySubText}>Be the first to share your fit!</Text>
-        <TouchableOpacity
-          style={styles.uploadTrigger}
-          onPress={() => navigation.navigate('UploadPost')}
-        >
-          <Ionicons name="add" size={35} color="black" />
-        </TouchableOpacity>
-      </View>
-    )
-  }
-
-  
+  useEffect(()=>{fetchRealPosts();},[]);
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={posts}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        pagingEnabled
-        snapToInterval={height}
-        snapToAlignment="start"
-        decelerationRate={0.999}
+      <ScrollView 
+        style={{flex:1}} 
+        contentContainerStyle={{paddingBottom:120}}
         showsVerticalScrollIndicator={false}
-        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-        getItemLayout={getItemLayout}
-        maxToRenderPerBatch={2}
-        windowSize={3}
-        initialNumToRender={1}
-        removeClippedSubviews={true}
-        snapToOffsets={posts.map((_,i) => i * height)}
-      />
-
-      <TouchableOpacity
-        style={styles.uploadTrigger}
-        onPress={() => navigation.navigate('UploadPost')}
       >
-        <Ionicons name="add" size={35} color="black" />
+        <Text style={styles.mainTitle}>THE STYLE FILES</Text>
+
+        <View style={styles.headerRow}>
+          <Text style={styles.sectionHeader}>Live Community</Text>
+          <TouchableOpacity onPress={fetchRealPosts}>
+            <Ionicons name="refresh" size={20} color="#7C5CBF"/>
+          </TouchableOpacity>
+        </View>
+        
+        {loading?(
+          <ActivityIndicator color="#7C5CBF" size="large" style={{marginTop:50}}/>
+        ):(
+          realPosts.map((post)=>(
+            <SocialPostCard 
+              key={post.id}
+              username={post.profiles?.username||`User_${post.user_id.slice(0,5)}`}
+              postImage={post.image_url} 
+              caption={post.caption}
+              likeCount={post.likeCount}
+              commentCount={post.commentCount}
+              isLiked={post.isLikedByMe}
+              onLikePress={()=>toggleLike(post.id,post.isLikedByMe)}
+              onCommentPress={()=>navigation.navigate('Comments',{postId:post.id})}
+            />
+          ))
+        )}
+      </ScrollView>
+
+      <TouchableOpacity 
+        style={styles.uploadTrigger}
+        onPress={()=>navigation.navigate('UploadPost')}
+      >
+        <Ionicons name="camera" size={30} color="black"/>
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
+const styles=StyleSheet.create({
+  container:{
+    flex:1,
+    backgroundColor:'#000',
   },
-  centered: {
-    flex: 1,
-    backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
+  mainTitle:{
+    color:'white',
+    fontSize:42,
+    fontWeight:'900',
+    marginTop:80,
+    marginLeft:15,
+    letterSpacing:-1,
   },
-  emptyText:{color:'#fff', fontSize: 18, fontWeight:'600'},
-  emptySubText: {color:'#666', fontSize: 14, marginTop: 8},  
-  uploadTrigger: {
-    position: 'absolute',
-    bottom: 30,
-    right: 25,
-    backgroundColor: '#fff',
-    width: 65,
-    height: 65,
-    borderRadius: 33,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
+  headerRow:{
+    flexDirection:'row',
+    alignItems:'center',
+    justifyContent:'space-between',
+    paddingHorizontal:15,
+    marginTop:20,
+    marginBottom:15,
   },
+  sectionHeader:{
+    color:'#7C5CBF', 
+    fontSize:14,
+    fontWeight:'bold',
+    textTransform:'uppercase',
+    letterSpacing:1,
+  },
+  uploadTrigger:{
+    position:'absolute',
+    bottom:30,
+    right:25,
+    backgroundColor:'#fff',
+    width:65,
+    height:65,
+    borderRadius:33,
+    justifyContent:'center',
+    alignItems:'center',
+    elevation:10,
+    shadowColor:'#7C5CBF',
+    shadowOpacity:0.4,
+    shadowRadius:10,
+  }
 });

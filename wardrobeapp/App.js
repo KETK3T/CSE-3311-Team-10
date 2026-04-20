@@ -19,6 +19,7 @@ import SocialScreenFeed from './src/screens/main/SocialScreenFeed'
 import ProfileScreen from './src/screens/main/ProfileScreen'
 
 import UploadPost from './src/screens/Social/UploadPost';
+import CommentsScreen from './src/screens/Social/CommentsScreen';
 
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from './src/backend/supabase-client'
@@ -36,6 +37,7 @@ function SocialNavigator(){
       <SocialStack.Screen name='UploadPost' component={UploadPost} options={{headerShown:true, title:'Post Anything !',headerStyle:{backgroundColor:'#000'},headerTintColor:'#fff'}}
       />
       <SocialStack.Screen name='PublicProfile' component={PublicProfileScreen}/>
+      <SocialStack.Screen name='Comments' component={CommentsScreen} options={{headerShown: false}}/>
       </SocialStack.Navigator>
   );
 }
