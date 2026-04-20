@@ -4,11 +4,13 @@ import {Ionicons} from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
 import {supabase} from '../../backend/supabase-client'; 
 import {useAuth} from '../../backend/useAuth';
+import {followUser,unfollowUser,isFollowing} from '../../backend/socialService';
 
 export default function SocialScreenFeed({navigation}){
   const {user}=useAuth(); 
   const [realPosts,setRealPosts]=useState([]);
   const [loading,setLoading]=useState(true);
+  const [followedUserIds,setFollowedUserIds]=useState(new Set());
 
   const fetchRealPosts=async()=>{
     try{
@@ -17,13 +19,21 @@ export default function SocialScreenFeed({navigation}){
         .from('social_posts')
         .select(`
           *,
-          profiles(username),
+          profiles(id,username,avatar_url),
           post_likes(user_id),
           post_comments(id)
         `)
         .order('created_at',{ascending:false});
 
       if(error) throw error;
+
+      if(user){
+        const authorIds=[...new Set(data.map(p=>p.user_id))];
+        const followStatuses=await Promise.all(
+          authorIds.map(async(id)=>({id,following:await isFollowing(user.id,id)}))
+        );
+        setFollowedUserIds(new Set(followStatuses.filter(f=>f.following).map(f=>f.id)));
+      }
 
       const formattedPosts=data.map(post=>{
         const likes=post.post_likes||[];
@@ -42,6 +52,21 @@ export default function SocialScreenFeed({navigation}){
       console.log("Fetch Error:",err.message);
     }finally{
       setLoading(false);
+    }
+  };
+
+  const toggleFollow=async(targetUserId)=>{
+    if(!user) return;
+    const currentlyFollowing=followedUserIds.has(targetUserId);
+    const newSet=new Set(followedUserIds);
+    if(currentlyFollowing) newSet.delete(targetUserId);
+    else newSet.add(targetUserId);
+    setFollowedUserIds(newSet);
+    try{
+      if(currentlyFollowing) await unfollowUser(user.id,targetUserId);
+      else await followUser(user.id,targetUserId);
+    }catch(err){
+      console.log("Follow error:",err);
     }
   };
 
@@ -68,7 +93,7 @@ export default function SocialScreenFeed({navigation}){
     }
   };
 
-  useEffect(()=>{fetchRealPosts();},[]);
+  useEffect(()=>{fetchRealPosts();},[user?.id]);
 
   return (
     <View style={styles.container}>
@@ -92,14 +117,17 @@ export default function SocialScreenFeed({navigation}){
           realPosts.map((post)=>(
             <SocialPostCard 
               key={post.id}
-              username={post.profiles?.username||`User_${post.user_id.slice(0,5)}`}
+              username={post.profiles?.username||'user'}
+              avatarUrl={post.profiles?.avatar_url}
               postImage={post.image_url} 
-              caption={post.caption}
               likeCount={post.likeCount}
               commentCount={post.commentCount}
               isLiked={post.isLikedByMe}
+              isFollowing={followedUserIds.has(post.user_id)}
               onLikePress={()=>toggleLike(post.id,post.isLikedByMe)}
               onCommentPress={()=>navigation.navigate('Comments',{postId:post.id})}
+              onFollowPress={()=>toggleFollow(post.user_id)}
+              onWardrobePress={()=>navigation.navigate('PublicProfile',{userId:post.user_id})}
             />
           ))
         )}

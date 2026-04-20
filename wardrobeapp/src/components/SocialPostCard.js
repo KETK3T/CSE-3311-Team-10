@@ -1,18 +1,23 @@
-import React from 'react';
+import React,{useState,memo} from 'react';
 import {View,Image,Text,StyleSheet,TouchableOpacity,Dimensions} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 
 const {width}=Dimensions.get('window');
 
-export default function SocialPostCard({ 
+const SocialPostCard=({ 
   username, 
-  postImage, 
+  postImage,
+  avatarUrl, 
   likeCount=0, 
   commentCount=0,
-  isLiked,       
+  isLiked,
+  hasWardrobeLink=true,       
   onLikePress,
-  onCommentPress
-}){
+  onCommentPress,
+  onWardrobePress
+})=>{
+  const [isFollowing,setIsFollowing]=useState(false);
+
   return (
     <View style={styles.postContainer}>
       <Image 
@@ -23,7 +28,11 @@ export default function SocialPostCard({
 
       <View style={styles.leftActions}>
         <View style={styles.profileIcon}>
-           <Ionicons name="person" size={20} color="white"/>
+          {avatarUrl?(
+            <Image source={{uri:avatarUrl}} style={styles.avatarImage}/>
+          ):(
+            <Ionicons name="person" size={20} color="white"/>
+          )}
         </View>
 
         <TouchableOpacity 
@@ -45,14 +54,34 @@ export default function SocialPostCard({
           <Ionicons name="chatbubble-outline" size={30} color="white"/>
           <Text style={styles.actionText}>{commentCount}</Text>
         </TouchableOpacity>
+
+        {hasWardrobeLink&&(
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={onWardrobePress}
+          >
+            <Ionicons name="pricetag-outline" size={28} color="white"/>
+            <Text style={styles.actionText}>Fit</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.textContainer}>
-        <Text style={styles.userHandle}>@{username}</Text>
+        <View style={styles.userRow}>
+          <Text style={styles.userHandle}>@{username}</Text>
+          <TouchableOpacity 
+            style={[styles.followBtn,isFollowing&&styles.followingBtn]}
+            onPress={()=>setIsFollowing(!isFollowing)}
+          >
+            <Text style={styles.followBtnText}>{isFollowing?'Following':'Follow'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
-}
+};
+
+export default memo(SocialPostCard);
 
 const styles=StyleSheet.create({
   postContainer:{
@@ -60,7 +89,7 @@ const styles=StyleSheet.create({
     alignSelf:'center',
     height:550,
     backgroundColor:'#000',
-    marginBottom:25,
+    marginBottom:45,
     borderRadius:25, 
     overflow:'hidden',
     borderWidth:1,
@@ -100,11 +129,22 @@ const styles=StyleSheet.create({
     alignItems:'center',
     borderWidth:1,
     borderColor:'white',
+    overflow:'hidden',
+  },
+  avatarImage:{
+    width:'100%',
+    height:'100%',
+    resizeMode:'cover',
   },
   textContainer:{
     position:'absolute',
     left:15,
     bottom:30,
+  },
+  userRow:{
+    flexDirection:'row',
+    alignItems:'center',
+    gap:10,
   },
   userHandle:{
     color:'yellow',
@@ -113,5 +153,21 @@ const styles=StyleSheet.create({
     textShadowColor:'rgba(0,0,0,0.8)',
     textShadowOffset:{width:1,height:1},
     textShadowRadius:5,
+  },
+  followBtn:{
+    borderWidth:1,
+    borderColor:'#7C5CBF',
+    paddingHorizontal:10,
+    paddingVertical:4,
+    borderRadius:12,
+    backgroundColor:'rgba(0,0,0,0.5)',
+  },
+  followingBtn:{
+    backgroundColor:'#7C5CBF',
+  },
+  followBtnText:{
+    color:'white',
+    fontSize:14,
+    fontWeight:'bold',
   }
 });
