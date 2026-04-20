@@ -1,10 +1,10 @@
 import React,{useState,useEffect} from 'react';
-import {ScrollView,StyleSheet,View,Text,TouchableOpacity,ActivityIndicator} from 'react-native';
+import {ScrollView,StyleSheet,View,Text,TouchableOpacity,ActivityIndicator,Alert} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
 import {supabase} from '../../backend/supabase-client'; 
 import {useAuth} from '../../backend/useAuth';
-import {followUser,unfollowUser,isFollowing} from '../../backend/socialService';
+import {followUser,unfollowUser,isFollowing,deletePost} from '../../backend/socialService';
 
 export default function SocialScreenFeed({navigation}){
   const {user}=useAuth(); 
@@ -39,7 +39,6 @@ export default function SocialScreenFeed({navigation}){
         const likes=post.post_likes||[];
         const comments=post.post_comments||[];
         const hasLiked=user?likes.some(l=>l.user_id===user.id):false;
-        
         return {
           ...post,
           likeCount:likes.length,
@@ -55,6 +54,21 @@ export default function SocialScreenFeed({navigation}){
     }
   };
 
+  const handleDelete=async(postId)=>{
+    Alert.alert("Delete Post","Are you sure you want to delete this?",[
+      {text:"Cancel",style:"cancel"},
+      {text:"Delete",style:"destructive",onPress:async()=>{
+        try{
+          setRealPosts(curr=>curr.filter(p=>p.id!==postId));
+          await deletePost(postId);
+        }catch(err){
+          console.log("Delete error:",err);
+          fetchRealPosts();
+        }
+      }}
+    ]);
+  };
+
   const toggleFollow=async(targetUserId)=>{
     if(!user) return;
     const currentlyFollowing=followedUserIds.has(targetUserId);
@@ -65,9 +79,7 @@ export default function SocialScreenFeed({navigation}){
     try{
       if(currentlyFollowing) await unfollowUser(user.id,targetUserId);
       else await followUser(user.id,targetUserId);
-    }catch(err){
-      console.log("Follow error:",err);
-    }
+    }catch(err){console.log("Follow error:",err);}
   };
 
   const toggleLike=async(postId,currentlyLiked)=>{
@@ -78,7 +90,6 @@ export default function SocialScreenFeed({navigation}){
       }
       return p;
     }));
-
     try{
       if(currentlyLiked){
         const {error}=await supabase.from('post_likes').delete().match({post_id:postId,user_id:user.id});
@@ -124,10 +135,12 @@ export default function SocialScreenFeed({navigation}){
               commentCount={post.commentCount}
               isLiked={post.isLikedByMe}
               isFollowing={followedUserIds.has(post.user_id)}
+              isOwner={post.user_id===user?.id}
               onLikePress={()=>toggleLike(post.id,post.isLikedByMe)}
               onCommentPress={()=>navigation.navigate('Comments',{postId:post.id})}
               onFollowPress={()=>toggleFollow(post.user_id)}
               onWardrobePress={()=>navigation.navigate('PublicProfile',{userId:post.user_id})}
+              onDelete={()=>handleDelete(post.id)}
             />
           ))
         )}

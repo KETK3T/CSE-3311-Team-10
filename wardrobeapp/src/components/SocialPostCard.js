@@ -11,20 +11,20 @@ const SocialPostCard=({
   likeCount=0, 
   commentCount=0,
   isLiked,
+  isFollowing,
+  isOwner,
+  onDelete,
   hasWardrobeLink=true,       
   onLikePress,
   onCommentPress,
+  onFollowPress,
   onWardrobePress
 })=>{
-  const [isFollowing,setIsFollowing]=useState(false);
+  const [isFollowingInternal,setIsFollowingInternal]=useState(isFollowing);
 
   return (
     <View style={styles.postContainer}>
-      <Image 
-        source={{uri:postImage}} 
-        style={styles.mainImage} 
-        resizeMode="cover" 
-      />
+      <Image source={{uri:postImage}} style={styles.mainImage} resizeMode="cover"/>
 
       <View style={styles.leftActions}>
         <View style={styles.profileIcon}>
@@ -35,33 +35,27 @@ const SocialPostCard=({
           )}
         </View>
 
-        <TouchableOpacity 
-          style={styles.actionButton} 
-          onPress={onLikePress}
-        >
-          <Ionicons 
-            name={isLiked?"heart":"heart-outline"} 
-            size={32} 
-            color={isLiked?"#ff4d4d":"white"} 
-          />
+        <TouchableOpacity style={styles.actionButton} onPress={onLikePress}>
+          <Ionicons name={isLiked?"heart":"heart-outline"} size={32} color={isLiked?"#ff4d4d":"white"}/>
           <Text style={styles.actionText}>{likeCount}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={onCommentPress}
-        >
+        <TouchableOpacity style={styles.actionButton} onPress={onCommentPress}>
           <Ionicons name="chatbubble-outline" size={30} color="white"/>
           <Text style={styles.actionText}>{commentCount}</Text>
         </TouchableOpacity>
 
         {hasWardrobeLink&&(
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={onWardrobePress}
-          >
+          <TouchableOpacity style={styles.actionButton} onPress={onWardrobePress}>
             <Ionicons name="pricetag-outline" size={28} color="white"/>
             <Text style={styles.actionText}>Fit</Text>
+          </TouchableOpacity>
+        )}
+
+        {isOwner&&(
+          <TouchableOpacity style={styles.actionButton} onPress={onDelete}>
+            <Ionicons name="trash-outline" size={26} color="#ff4d4d"/>
+            <Text style={styles.actionText}>Delete</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -69,12 +63,14 @@ const SocialPostCard=({
       <View style={styles.textContainer}>
         <View style={styles.userRow}>
           <Text style={styles.userHandle}>@{username}</Text>
-          <TouchableOpacity 
-            style={[styles.followBtn,isFollowing&&styles.followingBtn]}
-            onPress={()=>setIsFollowing(!isFollowing)}
-          >
-            <Text style={styles.followBtnText}>{isFollowing?'Following':'Follow'}</Text>
-          </TouchableOpacity>
+          {!isOwner&&(
+            <TouchableOpacity 
+              style={[styles.followBtn,isFollowing&&styles.followingBtn]}
+              onPress={onFollowPress}
+            >
+              <Text style={styles.followBtnText}>{isFollowing?'Following':'Follow'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
