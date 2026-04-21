@@ -20,7 +20,7 @@ export default function UploadPost({ navigation }) {
   const [base64Code, setBase64Code] = useState(null)
   const [captionText, setCaptionText] = useState('')
   const [isUploading, setIsUploading] = useState(false)
-  const [wardrobeItems, setWardrobeItems] = useState(false)
+  const [wardrobeItems, setWardrobeItems] = useState([])
   const [linkedItems, setLinkedItems] = useState([])
   const [showWardrobe, setShowWardrobe] = useState(false)
   

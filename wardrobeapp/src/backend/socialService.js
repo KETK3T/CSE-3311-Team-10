@@ -47,6 +47,7 @@ export const getPublicWardrobe = async (userId) => {
 		.from('clothing_items')
 		.select('*')
 		.eq('user_id', userId)
+		.eq('is_private', false)
 		.order('created_at', { ascending: false })
 	return { items: data || [], error: error?.message || null }
 }
@@ -75,4 +76,15 @@ export const deletePost = async(postId) => {
 		.delete()
 		.eq('id', postId)
 	return { error: error?.message || null}
+}
+
+export const getPublicFavorites = async (userId) => {
+	const { data, error } = await supabase
+		.from('clothing_items')
+		.select('*')
+		.eq('user_id', userId)
+		.eq('is_favorite', true)
+		.eq('is_private', false)
+		.order('created_at', { ascending: false })
+	return { items: data || [], error: error?.message || null }
 }

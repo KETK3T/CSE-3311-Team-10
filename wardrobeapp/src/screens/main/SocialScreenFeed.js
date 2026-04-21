@@ -1,4 +1,5 @@
-import React,{useState,useEffect} from 'react';
+import React,{useState,useEffect,useCallback, useRef} from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {ScrollView,StyleSheet,View,Text,TouchableOpacity,ActivityIndicator,Alert} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
@@ -12,6 +13,22 @@ export default function SocialScreenFeed({navigation}){
   const [loading,setLoading]=useState(true);
   const [followedUserIds,setFollowedUserIds]=useState(new Set());
 
+  const isFirstFocus = useRef(true)
+
+  useEffect(() => {
+    fetchRealPosts()
+  }, [user?.id])
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocus.current) {
+        isFirstFocus.current = false
+        return
+      }
+      if (!user?.id) return
+      fetchRealPosts()
+    }, [user?.id])
+  )
   const fetchRealPosts=async()=>{
     try{
       setLoading(true);
@@ -136,6 +153,7 @@ export default function SocialScreenFeed({navigation}){
               isLiked={post.isLikedByMe}
               isFollowing={followedUserIds.has(post.user_id)}
               isOwner={post.user_id===user?.id}
+              linkedItemIds={post.linked_item_ids || []}
               onLikePress={()=>toggleLike(post.id,post.isLikedByMe)}
               onCommentPress={()=>navigation.navigate('Comments',{postId:post.id})}
               onFollowPress={()=>toggleFollow(post.user_id)}

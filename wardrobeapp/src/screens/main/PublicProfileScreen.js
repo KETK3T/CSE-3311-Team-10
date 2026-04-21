@@ -6,9 +6,8 @@ import { Ionicons } from '@expo/vector-icons'
 import ClothingCard from '../../components/ClothingCard'
 import { colors, spacing, radius } from '../../theme'
 import { useAuth } from '../../backend/useAuth'
-import {getPublicProfile, getPublicWardrobe, getUserPosts,getFollowerCount, getFollowingCount, followUser,unfollowUser, isFollowing as checkIsFollowing
+import {getPublicFavorites, getPublicProfile, getPublicWardrobe, getUserPosts,getFollowerCount, getFollowingCount, followUser,unfollowUser, isFollowing as checkIsFollowing
 } from '../../backend/socialService'
-import { getAllFavorites } from '../../backend/wardrobeService'
 
 export default function PublicProfileScreen({ route, navigation }) {
 	const { userId } = route.params
@@ -42,7 +41,7 @@ export default function PublicProfileScreen({ route, navigation }) {
 			getPublicProfile(userId),
 			getPublicWardrobe(userId),
 			getUserPosts(userId),
-			getAllFavorites(userId),
+			getPublicFavorites(userId),
 			getFollowerCount(userId),
 			getFollowingCount(userId),
 			checkIsFollowing(user.id, userId),
