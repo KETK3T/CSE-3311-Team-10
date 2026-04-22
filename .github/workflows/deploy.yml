@@ -34,7 +34,10 @@ jobs:
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Fix asset paths in index.html
-        run: sed -i 's|/_expo/|/CSE-3311-Team-10/_expo/|g' dist/index.html
+        run: |
+          sed -i 's|/_expo/|/CSE-3311-Team-10/_expo/|g' dist/index.html
+          find dist/_expo -name "*.js" -exec sed -i 's|"/assets/|"/CSE-3311-Team-10/assets/|g' {} \;
+          find dist/_expo -name "*.js" -exec sed -i 's|"/_expo/|"/CSE-3311-Team-10/_expo/|g' {} \;
 
       - name: Add nojekyll
         run: touch dist/.nojekyll
