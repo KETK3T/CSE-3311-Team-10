@@ -33,12 +33,10 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
 
-      - name: Check for asset paths
-        run: grep -o '"[^"]*assets[^"]*"' dist/_expo/static/js/web/*.js | head -20
-        
-      - name: Fix asset paths in index.html
+      - name: Fix asset paths
         run: |
           sed -i 's|/_expo/|/CSE-3311-Team-10/_expo/|g' dist/index.html
+          find dist/_expo -name "*.js" -exec sed -i 's|"/assets/|"/CSE-3311-Team-10/assets/|g' {} \;
 
       - name: Add nojekyll
         run: touch dist/.nojekyll
@@ -47,4 +45,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./wardrobeapp/dist 
+          publish_dir: ./wardrobeapp/dist
