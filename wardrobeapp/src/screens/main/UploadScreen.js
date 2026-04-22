@@ -107,37 +107,49 @@ export default function UploadScreen({ navigation }) {
 
 	const handleUpload = async() => {
 		if (!selectedImage) return
-		if(!selectedCategory){
+		if (!selectedCategory) {
 			Alert.alert('Missing Info', 'Please select a category.')
 			return
 		}
+		if (selectedImage) {
+			const response = await fetch(selectedImage)
+			const blob = await response.blob()
+			if (blob.size > 5 * 1024 * 1024) {
+				Alert.alert('File too large', 'Please choose an image under 5MB.')
+				return
+			}
+		}
 		setIsUploading(true)
-		const {item, error} = await uploadClothingItem(
+		try {
+			const {item, error} = await uploadClothingItem(
 			selectedImage,
 			user?.id,
 			(msg) => setProgressMessage(msg),
 			{
 				category: selectedCategory,
 				season: selectedSeasons.length > 0 ? selectedSeasons : ['All'],
-				occasion: selectedOccasions.length > 0 ? selectedOccasions: ['Casual'],
+				occasion: selectedOccasions.length > 0 ? selectedOccasions : ['Casual'],
 				color: null,
 				brand: brand.trim() || null,
 			}
-		)
-	
-		setIsUploading(false)
-		if(error){
-			Alert.alert('Upload failed', error)
-			return
+			)
+			if (error) {
+				Alert.alert('Upload failed', error)
+				return
+			}
+			Alert.alert(
+				'Added to Wardrobe!',
+				`Category: ${selectedCategory}\nSeason: ${selectedSeasons.join(', ') || 'All'}\nOccasion: ${selectedOccasions.join(', ') || 'Casual'}`,
+				[{text: 'OK', onPress: () => {
+					handleDiscard()
+					navigation.navigate('Wardrobe')
+				}}]
+			)
+		} catch (e) {
+			Alert.alert('Upload failed', e.message)
+		} finally {
+			setIsUploading(false)
 		}
-		Alert.alert(
-			'Added to Wardrobe!',
-			`Category: ${selectedCategory}\nSeason: ${selectedSeasons.join(', ') || 'All'}\nOccasion: ${selectedOccasions.join(', ') || 'Casual'}`,
-			[{text: 'OK', onPress: () => {
-				handleDiscard()
-				navigation.navigate('Wardrobe')
-			}}]
-		)
 	}
 
 	if(!permission){
