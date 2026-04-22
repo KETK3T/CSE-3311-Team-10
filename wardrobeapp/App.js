@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: '#fff',
     borderTopColor: '#eee',
-    height: Platform.OS === 'web' ? 80 : 70,
+    height: Platform.OS === 'web' ? 100 : 70,
     paddingBottom: Platform.OS === 'web' ? 30 : 10,
     paddingTop: 6,
   },
