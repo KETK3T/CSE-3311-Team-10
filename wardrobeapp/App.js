@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopColor: '#eee',
     height: Platform.OS === 'web' ? 80 : 70,
-    paddingBottom: Platform.OS === 'web' ? 20 : 10,
+    paddingBottom: Platform.OS === 'web' ? 30 : 10,
     paddingTop: 6,
   },
   tabLabel: {
