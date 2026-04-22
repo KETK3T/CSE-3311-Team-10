@@ -30,6 +30,7 @@ export const addClothingItem = async (itemData) => {
 			season: itemData.season || [],
 			occasion: itemData.occasion || [],
 			color: itemData.color || null,
+			brand: itemData.brand || null,
 			is_favorite: false,
 		})
 		.select()

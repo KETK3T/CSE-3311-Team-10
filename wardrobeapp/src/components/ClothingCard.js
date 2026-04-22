@@ -17,6 +17,7 @@ const CATEGORY_COLORS = {
 export default function ClothingCard({
   imageUri,
   category = 'TOPS',
+  brand = null,
   isFavorite = false,
   isPrivate = false,
   onPress,
@@ -49,7 +50,9 @@ export default function ClothingCard({
     <View style={[styles.banner, { backgroundColor: bannerColor }]}>
           <Image source={category.toUpperCase() === 'TOPS' ? TopIcon : category.toUpperCase() === 'BOTTOMS' ? BotIcon : OuterIcon} 
                   style={styles.categoryIcon} />
-      <Text style={styles.bannerText}>{category.toUpperCase()}</Text>  
+      <Text style={styles.bannerText} numberOfLines={1}>
+        {brand ? `${brand.toUpperCase()} · ${category.toUpperCase()}` : category.toUpperCase()}
+      </Text> 
       <View style={styles.bannerRight}>
         {isPrivate && (
           <Ionicons name="lock-closed" size={12} color='#fff' style={{marginRight: 6}}/>

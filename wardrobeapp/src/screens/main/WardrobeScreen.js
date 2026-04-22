@@ -1,8 +1,9 @@
 import { useCallback, useState, useEffect } from 'react'
-import {View, Text, FlatList, TouchableOpacity,StyleSheet, ScrollView, ActivityIndicator, Alert,} from 'react-native'
+import {View, Text, FlatList, TouchableOpacity,StyleSheet, ScrollView, ActivityIndicator, Alert, TextInput} from 'react-native'
 import {SafeAreaView} from 'react-native-safe-area-context'
 import ClothingCard from '../../components/ClothingCard'
 import { colors, spacing, radius } from '../../theme'
+import {Ionicons} from '@expo/vector-icons'
 import {useFocusEffect} from '@react-navigation/native'
 import { getAllClothingItems, toggleFavorite, deleteClothingItem, togglePrivate } from '../../backend/wardrobeService'
 import { useAuth } from '../../backend/useAuth'
@@ -21,6 +22,7 @@ export default function WardrobeScreen({navigation}) {
   const [activeCategory, setActiveCategory] = useState('All')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
 
 
@@ -31,11 +33,14 @@ export default function WardrobeScreen({navigation}) {
 
   const loadItems = async () => {
     setLoading(true)
-    const {items: fetchedItems, error} = await getAllClothingItems(user?.id)
-    if (!error){
-      setItems(fetchedItems)
-    } 
-    setLoading(false)
+    try {
+      const { items: fetchedItems, error } = await getAllClothingItems(user?.id)
+      if (!error) setItems(fetchedItems)
+    } catch (e) {
+      console.log('loadItems error:', e.message)
+    } finally {
+      setLoading(false)  // always runs
+    }
   }
 
   useFocusEffect(
@@ -54,19 +59,18 @@ export default function WardrobeScreen({navigation}) {
     }, [user?.id, loading])
   )
 
-  const filtered = activeCategory === 'All'
-    ? items
-    : items.filter(i => i.category.toLowerCase() === activeCategory.toLowerCase())
-
-  const handleToggleFavorite = async (id, currentStatus) => {
-    const {item ,error} =  await toggleFavorite(id, currentStatus)
-    if(!error){
-      setItems(prev => 
-        prev.map(i => i.id === id? {...i, is_favorite: item.is_favorite} : i)
+  const filtered = items
+    .filter(i => activeCategory === 'All' || i.category.toLowerCase() === activeCategory.toLowerCase())
+    .filter(i => {
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase()
+      return (
+        i.category?.toLowerCase().includes(q) ||
+        i.brand?.toLowerCase().includes(q) ||
+        i.occasion?.some(o => o.toLowerCase().includes(q)) ||
+        i.season?.some(s => s.toLowerCase().includes(q))
       )
-    }
-  }
-
+  })
 
   const handleTogglePrivate = async (id, currentStatus) => {
     const {item, error} = await togglePrivate(id, currentStatus)
@@ -100,6 +104,7 @@ export default function WardrobeScreen({navigation}) {
       <ClothingCard
         imageUri={item.image_url}
         category={item.category}
+        brand={item.brand}
         isFavorite={item.is_favorite}
         isPrivate={item.is_private}
         onFavorite={() => handleToggleFavorite(item.id, item.is_favorite)}
@@ -118,12 +123,30 @@ export default function WardrobeScreen({navigation}) {
   return (
     <SafeAreaView style={styles.safe}>
       <Text style={styles.title}>My Wardrobe</Text>
-
+      <View style={styles.searchContainer}>
+        <Ionicons name="search-outline" size={18} color={colors.textLight} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by brand, category, occasion..."
+          placeholderTextColor={colors.textLight}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={18} color={colors.textLight} />
+          </TouchableOpacity>
+        )}
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterRow}
         style={{overflow: 'visible', paddingLeft: spacing.md,}}
+        keyboardShouldPersistTaps="handled"
       >
         {CATEGORIES.map(cat => {
           const isActive =  activeCategory === cat
@@ -258,5 +281,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textLight,
     marginTop: spacing.sm,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.inputBg,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    height: 44,
+  },
+  searchIcon: {
+    marginRight: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textDark,
+    paddingVertical: 0,
   },
 })

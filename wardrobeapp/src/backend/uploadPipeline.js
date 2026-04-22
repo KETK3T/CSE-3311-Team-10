@@ -48,6 +48,7 @@ export const uploadClothingItem = async(imageUri, userId, onProgress, manualTags
 			season: tags.season,
 			occasion: tags.occasion,
 			color: tags.color,
+			brand: tags.brand || null,
 		})
 
 		if (error) return {item: null,tags:null, error}

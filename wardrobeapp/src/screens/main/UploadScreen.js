@@ -1,5 +1,5 @@
-import { useState,useRef,useEffect, } from 'react'
-import {View, Text, TouchableOpacity, StyleSheet,Image, Alert,ActivityIndicator, ScrollView} from 'react-native'
+import { useState,useRef,useEffect, useCallback, } from 'react'
+import {View, Text, TouchableOpacity, StyleSheet,Image, Alert,ActivityIndicator, ScrollView, TextInput} from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import * as MediaLibrary from 'expo-media-library'
@@ -7,6 +7,7 @@ import { colors, spacing, radius } from '../../theme'
 import { uploadClothingItem } from '../../backend/uploadPipeline'
 import { useAuth } from '../../backend/useAuth'
 import {CameraView, useCameraPermissions} from 'expo-camera'
+import { useFocusEffect } from '@react-navigation/native'
 
 
 // const MOCK_USER_ID = '34f19f18-0889-4773-b27c-6bada8f795c4'
@@ -26,8 +27,15 @@ export default function UploadScreen({ navigation }) {
 	const [lastPhoto, setLastPhoto] = useState(null)
 	const[permission, requestPermission] = useCameraPermissions()
 	const cameraRef = useRef(null)
-	
+	const [brand, setBrand] = useState('')
+	const [isFocused, setIsFocused] = useState(false)
 
+	useFocusEffect(
+		useCallback(() => {
+			setIsFocused(true)
+			return () => setIsFocused(false)
+		}, [])
+	)
 
 	useEffect(() => {
 		const fetchLastPhoto = async () => {
@@ -80,6 +88,7 @@ export default function UploadScreen({ navigation }) {
 		setSelectedCategory(null)
 		setSelectedSeasons([])
 		setSelectedOccasions([])
+		setBrand('')
 	}
 
 	const toggleSeason = (season)=> {
@@ -110,6 +119,7 @@ export default function UploadScreen({ navigation }) {
 				season: selectedSeasons.length > 0 ? selectedSeasons : ['All'],
 				occasion: selectedOccasions.length > 0 ? selectedOccasions: ['Casual'],
 				color: null,
+				brand: brand.trim() || null,
 			}
 		)
 	
@@ -146,7 +156,9 @@ export default function UploadScreen({ navigation }) {
 	if (!selectedImage) {
 		return (
 			<View style={styles.cameraScreen}>
-				<CameraView style={StyleSheet.absoluteFill} facing={facing} ref={cameraRef}/>
+				{isFocused && (
+					<CameraView style={StyleSheet.absoluteFill} facing={facing} ref={cameraRef} />
+				)}
 			
 				<View style={styles.topBar}>
 					<TouchableOpacity onPress={() => navigation.navigate('Wardrobe')}>
@@ -178,79 +190,96 @@ export default function UploadScreen({ navigation }) {
 	}
 
 	return (
-		<ScrollView style={styles.previewScreen} showsVerticalScrollIndicator={false}>
-
-			<View style={styles.imageContainer}>
-				<Image source={{ uri: selectedImage }} style={styles.previewImage} resizeMode="contain" />
-			</View>
-
-			<View style={styles.tagsContainer}>
-				<Text style={styles.sectionLabel}>Category <Text style={styles.required}>*</Text></Text>
-				<View style={styles.chipRow}>
-					{CATEGORIES.map(cat => (
-						<TouchableOpacity
-							key={cat}
-							style={[styles.chip, selectedCategory === cat && styles.chipSelected]}
-							onPress={() => setSelectedCategory(cat)}
-						>
-							<Text style={[styles.chipText, selectedCategory === cat && styles.chipTextSelected]}>
-								{cat}
-							</Text>
-						</TouchableOpacity>
-					))}
+		<View style={{flex: 1}}>
+			<TouchableOpacity style={styles.previewCloseBtn} onPress={handleDiscard} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+				<Ionicons name="close" size={28} color={colors.textDark} />
+			</TouchableOpacity>
+			<ScrollView style={styles.previewScreen} showsVerticalScrollIndicator={false}>
+				<View style={styles.imageContainer}>
+					<Image source={{ uri: selectedImage }} style={styles.previewImage} resizeMode="contain" />
 				</View>
 
-				<Text style={styles.sectionLabel}>Season</Text>
-				<View style={styles.chipRow}>
-					{SEASONS.map(season => (
-						<TouchableOpacity
-							key={season}
-							style={[styles.chip, selectedSeasons.includes(season) && styles.chipSelected]}
-							onPress={() => toggleSeason(season)}
-						>
-							<Text style={[styles.chipText, selectedSeasons.includes(season) && styles.chipTextSelected]}>
-								{season}
-							</Text>
-						</TouchableOpacity>
-					))}
+				<View style={styles.brandContainer}>
+					<Text style={styles.sectionLabel}>Brand <Text style={styles.optional}>(optional)</Text></Text>
+					<TextInput
+						style={styles.brandInput}
+						placeholder="e.g. Nike, Zara, H&M..."
+						placeholderTextColor={colors.textLight}
+						value={brand}
+						onChangeText={setBrand}
+						autoCapitalize="words"
+						autoCorrect={false}
+					/>
 				</View>
 
-				<Text style={styles.sectionLabel}>Occasion</Text>
-				<View style={styles.chipRow}>
-					{OCCASIONS.map(occasion => (
-						<TouchableOpacity
-							key={occasion}
-							style={[styles.chip, selectedOccasions.includes(occasion) && styles.chipSelected]}
-							onPress={() => toggleOccasion(occasion)}
-						>
-							<Text style={[styles.chipText, selectedOccasions.includes(occasion) && styles.chipTextSelected]}>
-								{occasion}
-							</Text>
-						</TouchableOpacity>
-					))}
-				</View>
-			</View>
+				<View style={styles.tagsContainer}>
+					<Text style={styles.sectionLabel}>Category <Text style={styles.required}>*</Text></Text>
+					<View style={styles.chipRow}>
+						{CATEGORIES.map(cat => (
+							<TouchableOpacity
+								key={cat}
+								style={[styles.chip, selectedCategory === cat && styles.chipSelected]}
+								onPress={() => setSelectedCategory(cat)}
+							>
+								<Text style={[styles.chipText, selectedCategory === cat && styles.chipTextSelected]}>
+									{cat}
+								</Text>
+							</TouchableOpacity>
+						))}
+					</View>
 
-			{isUploading && (
-				<View style={styles.uploadingOverlay}>
-					<ActivityIndicator size="large" color="#fff" />
-					<Text style={styles.uploadingText}>{progressMessage}</Text>
-				</View>
-			)}
+					<Text style={styles.sectionLabel}>Season</Text>
+					<View style={styles.chipRow}>
+						{SEASONS.map(season => (
+							<TouchableOpacity
+								key={season}
+								style={[styles.chip, selectedSeasons.includes(season) && styles.chipSelected]}
+								onPress={() => toggleSeason(season)}
+							>
+								<Text style={[styles.chipText, selectedSeasons.includes(season) && styles.chipTextSelected]}>
+									{season}
+								</Text>
+							</TouchableOpacity>
+						))}
+					</View>
 
-			<View style={styles.previewActions}>
-				<TouchableOpacity style={styles.discardBtn} onPress={handleDiscard} disabled={isUploading}>
-					<Text style={styles.discardText}>Retake</Text>
-				</TouchableOpacity>
-				<TouchableOpacity
-					style={[styles.saveBtn, isUploading && { opacity: 0.6 }]}
-					onPress={handleUpload}
-					disabled={isUploading}
-				>
-					<Text style={styles.saveText}>{isUploading ? 'Processing...' : 'Add to Wardrobe'}</Text>
-				</TouchableOpacity>
-			</View>
-		</ScrollView>
+					<Text style={styles.sectionLabel}>Occasion</Text>
+					<View style={styles.chipRow}>
+						{OCCASIONS.map(occasion => (
+							<TouchableOpacity
+								key={occasion}
+								style={[styles.chip, selectedOccasions.includes(occasion) && styles.chipSelected]}
+								onPress={() => toggleOccasion(occasion)}
+							>
+								<Text style={[styles.chipText, selectedOccasions.includes(occasion) && styles.chipTextSelected]}>
+									{occasion}
+								</Text>
+							</TouchableOpacity>
+						))}
+					</View>
+				</View>
+
+				{isUploading && (
+					<View style={styles.uploadingOverlay}>
+						<ActivityIndicator size="large" color="#fff" />
+						<Text style={styles.uploadingText}>{progressMessage}</Text>
+					</View>
+				)}
+
+				<View style={styles.previewActions}>
+					<TouchableOpacity style={styles.discardBtn} onPress={handleDiscard} disabled={isUploading}>
+						<Text style={styles.discardText}>Retake</Text>
+					</TouchableOpacity>
+					<TouchableOpacity
+						style={[styles.saveBtn, isUploading && { opacity: 0.6 }]}
+						onPress={handleUpload}
+						disabled={isUploading}
+					>
+						<Text style={styles.saveText}>{isUploading ? 'Processing...' : 'Add to Wardrobe'}</Text>
+					</TouchableOpacity>
+				</View>
+			</ScrollView>
+		</View>	
 		
 	)
 }
@@ -427,4 +456,39 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   saveText: { color: colors.textDark, fontSize: 15, fontWeight: '600' },
+  brandContainer: {
+	paddingHorizontal: spacing.lg,
+	paddingTop: spacing.lg,
+	},
+	brandInput: {
+	borderWidth: 1,
+	borderColor: colors.border,
+	borderRadius: radius.sm,
+	paddingHorizontal: spacing.md,
+	paddingVertical: spacing.md,
+	fontSize: 15,
+	color: colors.textDark,
+	backgroundColor: colors.inputBg,
+	},
+	optional: {
+	color: colors.textLight,
+	fontWeight: '400',
+	},
+	previewCloseBtn: {
+	position: 'absolute',
+	top: 56,
+	left: 20,
+	zIndex: 10,
+	backgroundColor: colors.white,
+	borderRadius: 20,
+	width: 40,
+	height: 40,
+	alignItems: 'center',
+	justifyContent: 'center',
+	shadowColor: '#000',
+	shadowOpacity: 0.1,
+	shadowRadius: 4,
+	shadowOffset: { width: 0, height: 2 },
+	elevation: 3,
+	},
 })
