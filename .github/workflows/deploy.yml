@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./wardrobeapp  # change this to your actual subdirectory name
+        working-directory: ./wardrobeapp
 
     steps:
       - name: Checkout
@@ -32,6 +32,12 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Fix asset paths in index.html
+        run: sed -i 's|/_expo/|/CSE-3311-Team-10/_expo/|g' dist/index.html
+
+      - name: Add nojekyll
+        run: touch dist/.nojekyll
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
