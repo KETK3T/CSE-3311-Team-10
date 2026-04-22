@@ -25,6 +25,7 @@ export default function MixerScreen({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(true)
   const [selected, setSelected] = useState({ Tops: 0, Outerwear: 0, Bottoms: 0 })
   const fadeAnim = useRef(new Animated.Value(0)).current
+  const [locked, setLocked] = useState({Tops: null, Outerwear: null, Bottoms: null})
 
   const flatListRefs = {
     Tops: useRef(null),
@@ -89,8 +90,9 @@ export default function MixerScreen({ navigation, route }) {
       Animated.timing(fadeAnim, { toValue: 0.4, duration: 120, useNativeDriver: true }),
       Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
     ]).start()
-    const newSelected = {}
+    const newSelected = { ...selected }
     CATEGORIES.forEach(cat => {
+      if (locked[cat] !== null) return // skip locked categories
       if (wardrobe[cat].length === 0) return
       const randomIndex = Math.floor(Math.random() * wardrobe[cat].length)
       newSelected[cat] = randomIndex
@@ -176,12 +178,26 @@ export default function MixerScreen({ navigation, route }) {
 
                 return (
                   <View key={cat}>
-                    {/* Row header with pill and counter */}
                     <View style={styles.rowHeader}>
                       <View style={[styles.categoryPill, { backgroundColor: config.accent }]}>
                         <Text style={styles.categoryPillText}>{config.label}</Text>
                       </View>
-                      <Text style={styles.counter}>{currentIndex + 1} / {items.length}</Text>
+                      <View style={styles.rowHeaderRight}>
+                        <Text style={styles.counter}>{currentIndex + 1} / {items.length}</Text>
+                        <TouchableOpacity
+                          style={[styles.lockBtn, locked[cat] !== null && { backgroundColor: config.accent }]}
+                          onPress={() => setLocked(prev => ({
+                            ...prev,
+                            [cat]: prev[cat] !== null ? null : currentIndex
+                          }))}
+                        >
+                          <Ionicons
+                            name={locked[cat] !== null ? 'lock-closed' : 'lock-open-outline'}
+                            size={14}
+                            color={locked[cat] !== null ? '#1a1a1a' : colors.textLight}
+                          />
+                        </TouchableOpacity>
+                      </View>
                     </View>
 
                     <View style={{ overflow: 'hidden', width: cardWidth, alignSelf: 'center' }}>
@@ -215,7 +231,6 @@ export default function MixerScreen({ navigation, route }) {
                       />
                     </View>
 
-                    {/* Dots */}
                     {items.length > 1 && (
                       <View style={styles.dotsRow}>
                         {items.map((_, i) => (
@@ -230,7 +245,6 @@ export default function MixerScreen({ navigation, route }) {
                       </View>
                     )}
 
-                    {/* Divider between categories */}
                     {catIndex < CATEGORIES.length - 1 && (
                       <View style={styles.divider} />
                     )}
@@ -326,6 +340,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     paddingHorizontal: spacing.sm,
   },
+  rowHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   categoryPill: {
     paddingHorizontal: 10,
     paddingVertical: 3,
@@ -409,5 +428,15 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: colors.textMid,
+  },
+  lockBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
   },
 })
