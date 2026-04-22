@@ -13,8 +13,16 @@
     <title>Virtual Wardrobe</title>
     <style>
       * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-      html, body, #root { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+      html, body, #root { 
+        height: 100%; 
+        height: -webkit-fill-available;
+        margin: 0; 
+        padding: 0; 
+        overflow: hidden; 
+      }
       body {
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
         background-color: #f0edf7;
         display: flex;
         justify-content: center;
@@ -26,6 +34,7 @@
         width: 100%;
         max-width: 430px;
         height: 100vh;
+        height: -webkit-fill-available;
         overflow: hidden;
         box-shadow: 0 0 60px rgba(0,0,0,0.2);
       }
