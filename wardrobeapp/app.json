@@ -24,6 +24,9 @@
       }
     },
     "web": {
+      "publicPath": "/CSE-3311-Team-10/",
+      "bundler": "metro",
+      "output": "single",
       "favicon": "./assets/wardobe-favicon.png"
     },
     "plugins": [

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "deploy": "expo export --platform web && gh-pages -d dist",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -26,14 +27,17 @@
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "react-native-url-polyfill": "^3.0.0"
+    "react-native-url-polyfill": "^3.0.0",
+    "react-native-web": "^0.21.0"
   },
   "private": true,
   "devDependencies": {
     "eslint": "^9.39.4",
-    "eslint-config-expo": "^55.0.1-canary-20260328-2049187"
+    "eslint-config-expo": "^55.0.1-canary-20260328-2049187",
+    "gh-pages": "^6.3.0"
   }
 }

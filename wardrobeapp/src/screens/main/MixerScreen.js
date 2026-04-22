@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Share, FlatList, useWindowDimensions, ActivityIndicator, Animated,
+  Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -20,20 +21,35 @@ const CATEGORY_CONFIG = {
 }
 
 export default function MixerScreen({ navigation, route }) {
+ 
   const { user } = useAuth()
   const [wardrobe, setWardrobe] = useState({ Tops: [], Outerwear: [], Bottoms: [] })
   const [isLoading, setIsLoading] = useState(true)
   const [selected, setSelected] = useState({ Tops: 0, Outerwear: 0, Bottoms: 0 })
-  const fadeAnim = useRef(new Animated.Value(0)).current
   const [locked, setLocked] = useState({Tops: null, Outerwear: null, Bottoms: null})
+  const nativeDriver = Platform.OS !== 'web'
+  const fadeAnim = useRef(new Animated.Value(Platform.OS === 'web' ? 1 : 0)).current
+
+  const onViewableItemsChangedRefs = {
+    Tops: useRef(({ viewableItems }) => {
+      if (viewableItems[0]) setSelected(prev => ({ ...prev, Tops: viewableItems[0].index }))
+    }),
+    Outerwear: useRef(({ viewableItems }) => {
+      if (viewableItems[0]) setSelected(prev => ({ ...prev, Outerwear: viewableItems[0].index }))
+    }),
+    Bottoms: useRef(({ viewableItems }) => {
+      if (viewableItems[0]) setSelected(prev => ({ ...prev, Bottoms: viewableItems[0].index }))
+    }),
+  }
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 })
 
   const flatListRefs = {
     Tops: useRef(null),
     Outerwear: useRef(null),
     Bottoms: useRef(null),
   }
-
-  const { width } = useWindowDimensions()
+  const {width: windowWidth} = useWindowDimensions()
+  const width = Platform.OS === 'web' ? Math.min(windowWidth, 430) : windowWidth
   const cardWidth = width - 200
 
   useEffect(() => {
@@ -47,7 +63,9 @@ export default function MixerScreen({ navigation, route }) {
       CATEGORIES.forEach((cat, i) => { newWardrobe[cat] = results[i].items })
       setWardrobe(newWardrobe)
       setIsLoading(false)
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start()
+      if (Platform.OS !== 'web') {
+        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: false }).start()
+      }
     }
     initFetch()
   }, [user?.id])
@@ -86,10 +104,12 @@ export default function MixerScreen({ navigation, route }) {
   }, [route.params?.timestamp])
 
   const handleRandomize = () => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, { toValue: 0.4, duration: 120, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-    ]).start()
+    if (Platform.OS !== 'web') {
+      Animated.sequence([
+        Animated.timing(fadeAnim, { toValue: 0.4, duration: 120, useNativeDriver: false }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: false }),
+      ]).start()
+    }
     const newSelected = { ...selected }
     CATEGORIES.forEach(cat => {
       if (locked[cat] !== null) return // skip locked categories
@@ -130,10 +150,106 @@ export default function MixerScreen({ navigation, route }) {
     )
   }
 
+  const content = (
+    <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} style={Platform.OS === 'web' ? { flex: 1 } : undefined}>
+      <View style={styles.outfitArea}>
+          <View style={styles.cardsColumn}>
+              {CATEGORIES.map((cat, catIndex) => {
+                const items = wardrobe[cat]
+                const config = CATEGORY_CONFIG[cat]
+                const currentIndex = selected[cat] || 0
+                if (items.length === 0) {
+                  return (
+                    <View key={cat}>
+                      <View style={styles.rowHeader}>
+                        <View style={[styles.categoryPill, { backgroundColor: config.accent }]}>
+                          <Text style={styles.categoryPillText}>{config.label}</Text>
+                        </View>
+                      </View>
+                      <View style={[styles.emptySlot, { width: cardWidth, borderColor: config.accent }]}>
+                        <Ionicons name="add-circle-outline" size={32} color={config.accent} />
+                        <Text style={[styles.emptySlotText, { color: config.accent }]}>No {cat}</Text>
+                      </View>
+                    </View>
+                  )
+                }
+                return (
+                  <View key={cat}>
+                    <View style={styles.rowHeader}>
+                      <View style={[styles.categoryPill, { backgroundColor: config.accent }]}>
+                        <Text style={styles.categoryPillText}>{config.label}</Text>
+                      </View>
+                      <View style={styles.rowHeaderRight}>
+                      <Text style={styles.counter}>{currentIndex + 1} / {items.length}</Text>
+                      <TouchableOpacity
+                        style={[styles.lockBtn, locked[cat] !== null && { backgroundColor: config.accent }]}
+                        onPress={() => setLocked(prev => ({
+                          ...prev,
+                          [cat]: prev[cat] !== null ? null : currentIndex
+                        }))}
+                      >
+                        <Ionicons
+                          name={locked[cat] !== null ? 'lock-closed' : 'lock-open-outline'}
+                          size={14}
+                          color={locked[cat] !== null ? '#1a1a1a' : colors.textLight}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={{ overflow: 'hidden', width: cardWidth, alignSelf: 'center' }}>
+                    <FlatList
+                      ref={flatListRefs[cat]}
+                      data={items}
+                      keyExtractor={item => item.id}
+                      horizontal
+                      pagingEnabled={Platform.OS !== 'web'}
+                      scrollEnabled={true}
+                      showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                      snapToInterval={Platform.OS !== 'web' ? cardWidth + spacing.md : undefined}
+                      decelerationRate="fast"
+                      onViewableItemsChanged={onViewableItemsChangedRefs[cat].current}
+                      viewabilityConfig={viewabilityConfig.current}
+                      renderItem={({ item }) => (
+                        <View style={{ width: cardWidth, marginRight: spacing.md, height: 200 }}>
+                          <View style={styles.cardWrapper}>
+                            <ClothingCard
+                              imageUri={item.image_url}
+                              category={item.category}
+                              style={{ flex: 1 }}
+                            />
+                            <View style={[styles.cardAccentBar, { backgroundColor: config.accent }]} />
+                          </View>
+                        </View>
+                      )}
+                    />
+                  </View>
+                  {items.length > 1 && (
+                    <View style={styles.dotsRow}>
+                      {items.map((_, i) => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.dot,
+                            i === currentIndex && { ...styles.dotActive, backgroundColor: config.accent }
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  )}
+                  {catIndex < CATEGORIES.length - 1 && (
+                    <View style={styles.divider} />
+                  )}
+                </View>
+                )
+              })}
+          </View>
+
+      </View>
+    </ScrollView>
+  )
+
   return (
     <SafeAreaView style={styles.safe}>
-
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.eyebrow}>TODAY'S LOOK</Text>
@@ -150,112 +266,109 @@ export default function MixerScreen({ navigation, route }) {
         </View>
       </View>
 
-      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.outfitArea}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.outfitArea}>
+          <View style={styles.cardsColumn}>
+            {CATEGORIES.map((cat, catIndex) => {
+              const items = wardrobe[cat]
+              const config = CATEGORY_CONFIG[cat]
+              const currentIndex = selected[cat] || 0
 
-            <View style={styles.cardsColumn}>
-              {CATEGORIES.map((cat, catIndex) => {
-                const items = wardrobe[cat]
-                const config = CATEGORY_CONFIG[cat]
-                const currentIndex = selected[cat] || 0
-
-                if (items.length === 0) {
-                  return (
-                    <View key={cat}>
-                      <View style={styles.rowHeader}>
-                        <View style={[styles.categoryPill, { backgroundColor: config.accent }]}>
-                          <Text style={styles.categoryPillText}>{config.label}</Text>
-                        </View>
-                      </View>
-                      <View style={[styles.emptySlot, { width: cardWidth, borderColor: config.accent }]}>
-                        <Ionicons name="add-circle-outline" size={32} color={config.accent} />
-                        <Text style={[styles.emptySlotText, { color: config.accent }]}>No {cat}</Text>
-                      </View>
-                    </View>
-                  )
-                }
-
+              if (items.length === 0) {
                 return (
                   <View key={cat}>
                     <View style={styles.rowHeader}>
                       <View style={[styles.categoryPill, { backgroundColor: config.accent }]}>
                         <Text style={styles.categoryPillText}>{config.label}</Text>
                       </View>
-                      <View style={styles.rowHeaderRight}>
-                        <Text style={styles.counter}>{currentIndex + 1} / {items.length}</Text>
-                        <TouchableOpacity
-                          style={[styles.lockBtn, locked[cat] !== null && { backgroundColor: config.accent }]}
-                          onPress={() => setLocked(prev => ({
-                            ...prev,
-                            [cat]: prev[cat] !== null ? null : currentIndex
-                          }))}
-                        >
-                          <Ionicons
-                            name={locked[cat] !== null ? 'lock-closed' : 'lock-open-outline'}
-                            size={14}
-                            color={locked[cat] !== null ? '#1a1a1a' : colors.textLight}
-                          />
-                        </TouchableOpacity>
-                      </View>
                     </View>
-
-                    <View style={{ overflow: 'hidden', width: cardWidth, alignSelf: 'center' }}>
-                      <FlatList
-                        ref={flatListRefs[cat]}
-                        data={items}
-                        keyExtractor={item => item.id}
-                        horizontal
-                        pagingEnabled
-                        showsHorizontalScrollIndicator={false}
-                        snapToInterval={cardWidth + spacing.md}
-                        decelerationRate="fast"
-                        onViewableItemsChanged={({ viewableItems }) => {
-                          if (viewableItems[0]) {
-                            setSelected(prev => ({ ...prev, [cat]: viewableItems[0].index }))
-                          }
-                        }}
-                        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-                        renderItem={({ item }) => (
-                          <View style={{ width: cardWidth, marginRight: spacing.md, height: 200 }}>
-                            <View style={styles.cardWrapper}>
-                              <ClothingCard
-                                imageUri={item.image_url}
-                                category={item.category}
-                                style={{ flex: 1 }}
-                              />
-                              <View style={[styles.cardAccentBar, { backgroundColor: config.accent }]} />
-                            </View>
-                          </View>
-                        )}
-                      />
+                    <View style={[styles.emptySlot, { width: cardWidth, borderColor: config.accent }]}>
+                      <Ionicons name="add-circle-outline" size={32} color={config.accent} />
+                      <Text style={[styles.emptySlotText, { color: config.accent }]}>No {cat}</Text>
                     </View>
-
-                    {items.length > 1 && (
-                      <View style={styles.dotsRow}>
-                        {items.map((_, i) => (
-                          <View
-                            key={i}
-                            style={[
-                              styles.dot,
-                              i === currentIndex && { ...styles.dotActive, backgroundColor: config.accent }
-                            ]}
-                          />
-                        ))}
-                      </View>
-                    )}
-
-                    {catIndex < CATEGORIES.length - 1 && (
-                      <View style={styles.divider} />
-                    )}
                   </View>
                 )
-              })}
-            </View>
+              }
 
+              return (
+                <View key={cat}>
+                  <View style={styles.rowHeader}>
+                    <View style={[styles.categoryPill, { backgroundColor: config.accent }]}>
+                      <Text style={styles.categoryPillText}>{config.label}</Text>
+                    </View>
+                    <View style={styles.rowHeaderRight}>
+                      <Text style={styles.counter}>{currentIndex + 1} / {items.length}</Text>
+                      <TouchableOpacity
+                        style={[styles.lockBtn, locked[cat] !== null && { backgroundColor: config.accent }]}
+                        onPress={() => setLocked(prev => ({
+                          ...prev,
+                          [cat]: prev[cat] !== null ? null : currentIndex
+                        }))}
+                      >
+                        <Ionicons
+                          name={locked[cat] !== null ? 'lock-closed' : 'lock-open-outline'}
+                          size={14}
+                          color={locked[cat] !== null ? '#1a1a1a' : colors.textLight}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={{ overflow: 'hidden', width: cardWidth, alignSelf: 'center' }}>
+                    <FlatList
+                      ref={flatListRefs[cat]}
+                      data={items}
+                      keyExtractor={item => item.id}
+                      horizontal
+                      pagingEnabled={Platform.OS !== 'web'}
+                      scrollEnabled={true}
+                      showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                      snapToInterval={Platform.OS !== 'web' ? cardWidth + spacing.md : undefined}
+                      decelerationRate="fast"
+                      onViewableItemsChanged={onViewableItemsChangedRefs[cat].current}
+                      viewabilityConfig={viewabilityConfig.current}
+                      renderItem={({ item }) => (
+                        <View style={{ width: cardWidth, marginRight: spacing.md, height: 200 }}>
+                          <View style={styles.cardWrapper}>
+                            <ClothingCard
+                              imageUri={item.image_url}
+                              category={item.category}
+                              style={{ flex: 1 }}
+                            />
+                            <View style={[styles.cardAccentBar, { backgroundColor: config.accent }]} />
+                          </View>
+                        </View>
+                      )}
+                    />
+                  </View>
+
+                  {items.length > 1 && (
+                    <View style={styles.dotsRow}>
+                      {items.map((_, i) => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.dot,
+                            i === currentIndex && { ...styles.dotActive, backgroundColor: config.accent }
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  )}
+
+                  {catIndex < CATEGORIES.length - 1 && (
+                    <View style={styles.divider} />
+                  )}
+                </View>
+              )
+            })}
           </View>
-        </ScrollView>
-      </Animated.View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   )
 }
@@ -264,6 +377,7 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && { overflow: 'hidden' }),
   },
   centered: {
     flex: 1,

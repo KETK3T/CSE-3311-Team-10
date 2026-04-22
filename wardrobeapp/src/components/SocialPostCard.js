@@ -1,11 +1,11 @@
 import React, { useState, useEffect, memo } from 'react';
-import { View, Image, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Image, Text, StyleSheet, TouchableOpacity, Dimensions, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../backend/supabase-client';
 import {LinearGradient} from 'expo-linear-gradient'
 
 
-const { width } = Dimensions.get('window');
+
 
 const SocialPostCard = ({
   username,
@@ -24,7 +24,9 @@ const SocialPostCard = ({
   onWardrobePress,
 }) => {
   const [linkedItems, setLinkedItems] = useState([])
-
+  const { width: windowWidth } = useWindowDimensions()
+  const width = Platform.OS === 'web' ? Math.min(windowWidth, 430) : windowWidth
+  
   useEffect(() => {
     if (linkedItemIds?.length > 0) {
       supabase
@@ -36,7 +38,7 @@ const SocialPostCard = ({
   }, [linkedItemIds])
 
   return (
-    <View style={styles.postContainer}>
+    <View style={[styles.postContainer, {width: width * 0.9}]}>
       <Image source={{ uri: postImage }} style={styles.mainImage} resizeMode="cover" />
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.85)']}
@@ -122,7 +124,6 @@ export default memo(SocialPostCard)
 
 const styles = StyleSheet.create({
   postContainer: {
-    width: width * 0.90,
     alignSelf: 'center',
     height: 550,
     backgroundColor: '#000',
@@ -254,5 +255,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
     elevation: 8,
+  },
+  mainTitle: {
+    color: 'white',
+    fontSize: 42,
+    fontWeight: '900',
+    marginTop: Platform.OS === 'web' ? 20 : 80,
+    marginLeft: 15,
+    letterSpacing: -1,
   },
 })

@@ -8,6 +8,7 @@ import { uploadClothingItem } from '../../backend/uploadPipeline'
 import { useAuth } from '../../backend/useAuth'
 import {CameraView, useCameraPermissions} from 'expo-camera'
 import { useFocusEffect } from '@react-navigation/native'
+import { Platform } from 'react-native'
 
 
 // const MOCK_USER_ID = '34f19f18-0889-4773-b27c-6bada8f795c4'
@@ -38,6 +39,7 @@ export default function UploadScreen({ navigation }) {
 	)
 
 	useEffect(() => {
+		if (Platform.OS === 'web') return
 		const fetchLastPhoto = async () => {
 			const {status} = await MediaLibrary.requestPermissionsAsync()
 			if (status !== 'granted') return
@@ -154,6 +156,22 @@ export default function UploadScreen({ navigation }) {
 	}
 
 	if (!selectedImage) {
+		if (Platform.OS === 'web') {
+			return (
+			<View style={[styles.cameraScreen, { alignItems: 'center', justifyContent: 'center' }]}>
+				<Ionicons name="camera-off-outline" size={48} color="rgba(255,255,255,0.4)" />
+				<Text style={{ color: 'rgba(255,255,255,0.4)', marginTop: 12, fontSize: 14 }}>
+				Camera not available on web
+				</Text>
+				<TouchableOpacity
+				style={{ marginTop: 24, backgroundColor: '#fff', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 }}
+				onPress={openGallery}
+				>
+				<Text style={{ color: '#000', fontWeight: '600' }}>Choose from Gallery</Text>
+				</TouchableOpacity>
+			</View>
+			)
+		}
 		return (
 			<View style={styles.cameraScreen}>
 				{isFocused && (

@@ -3,7 +3,7 @@ import {useState, useEffect} from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, View, Platform,} from 'react-native'
 import {useFonts, PatrickHand_400Regular} from '@expo-google-fonts/patrick-hand'
 import * as SplashScreen from 'expo-splash-screen'
 
@@ -43,31 +43,34 @@ function SocialNavigator(){
 }
 function MainTabs() {
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarActiveTintColor: '#7C5CBF',
-        tabBarInactiveTintColor: '#999',
-        tabBarIcon: ({ color, size }) => {
-          const icons = {
-            Wardrobe: 'grid-outline',
-            Mixer: 'shuffle-outline',
-            Upload: 'add-circle-outline',
-            Social: 'people-outline',
-            Profile: 'person-outline',
-          }
-          return <Ionicons name={icons[route.name]} size={size} color={color} />;
-        },
-      })}
-    >
-      <Tab.Screen name="Wardrobe" component={WardrobeScreen} />
-      <Tab.Screen name="Mixer" component={MixerScreen} />
-      <Tab.Screen name="Upload" component={UploadScreen} />
-      <Tab.Screen name="Social" component={SocialNavigator} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
+    <View style={styles.appContainer}>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarStyle: styles.tabBar,
+          tabBarLabelStyle: styles.tabLabel,
+          tabBarActiveTintColor: '#7C5CBF',
+          tabBarInactiveTintColor: '#999',
+          tabBarIcon: ({ color, size }) => {
+            const icons = {
+              Wardrobe: 'grid-outline',
+              Mixer: 'shuffle-outline',
+              Upload: 'add-circle-outline',
+              Social: 'people-outline',
+              Profile: 'person-outline',
+            }
+            return <Ionicons name={icons[route.name]} size={size} color={color} />;
+          },
+        })}
+      >
+        <Tab.Screen name="Wardrobe" component={WardrobeScreen} />
+        <Tab.Screen name="Mixer" component={MixerScreen} />
+        <Tab.Screen name="Upload" component={UploadScreen} />
+        <Tab.Screen name="Social" component={SocialNavigator} />
+        <Tab.Screen name="Profile" component={ProfileScreen} />
+      </Tab.Navigator>
+    </View>
+    
   )
 }
 
@@ -114,20 +117,22 @@ export default function App() {
     )
   }
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {session ? (
-          <Stack.Screen name="Main" component={MainTabs}/>
-        ) : (
-          <>
-            <Stack.Screen name="Welcome" component={WelcomeScreen} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <View style={styles.appContainer}>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {session ? (
+            <Stack.Screen name="Main" component={MainTabs}/>
+          ) : (
+            <>
+              <Stack.Screen name="Welcome" component={WelcomeScreen} />
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Register" component={RegisterScreen} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </View>
   )
 }
 
@@ -144,5 +149,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  appContainer: {
+    flex: 1,
+    ...(Platform.OS === 'web' && {
+      maxWidth: 430,
+      width: '100%',
+      marginHorizontal: 'auto',
+      height: '100vh',
+      overflow: 'hidden',
+      boxShadow: '0 0 40px rgba(0,0,0,0.15)',
+    }),
   },
 })

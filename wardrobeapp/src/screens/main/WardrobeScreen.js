@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react'
-import {View, Text, FlatList, TouchableOpacity,StyleSheet, ScrollView, ActivityIndicator, Alert, TextInput} from 'react-native'
+import {View, Text, FlatList, TouchableOpacity,StyleSheet, ScrollView, ActivityIndicator, Alert, TextInput, Platform} from 'react-native'
 import {SafeAreaView} from 'react-native-safe-area-context'
 import ClothingCard from '../../components/ClothingCard'
 import { colors, spacing, radius } from '../../theme'
@@ -23,7 +23,7 @@ export default function WardrobeScreen({navigation}) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-
+  const Container = Platform.OS === 'web' ? View : SafeAreaView
 
 
   useEffect(() => {
@@ -79,6 +79,14 @@ export default function WardrobeScreen({navigation}) {
     }
   }
 
+  const handleToggleFavorite = async (id, currentStatus) => {
+    const { item, error } = await toggleFavorite(id, currentStatus)
+    if (!error) {
+      setItems(prev =>
+        prev.map(i => i.id === id ? { ...i, is_favorite: item.is_favorite } : i)
+      )
+    }
+  }
   const handleDelete = async (id) => {
     Alert.alert(
       'Delete Item',
@@ -121,7 +129,7 @@ export default function WardrobeScreen({navigation}) {
 
   
   return (
-    <SafeAreaView style={styles.safe}>
+    <Container style={styles.safe}>
       <Text style={styles.title}>My Wardrobe</Text>
       <View style={styles.searchContainer}>
         <Ionicons name="search-outline" size={18} color={colors.textLight} style={styles.searchIcon} />
@@ -145,7 +153,7 @@ export default function WardrobeScreen({navigation}) {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterRow}
-        style={{overflow: 'visible', paddingLeft: spacing.md,}}
+        style={{overflow: 'visible', paddingLeft: spacing.md, maxHeight: 70}}
         keyboardShouldPersistTaps="handled"
       >
         {CATEGORIES.map(cat => {
@@ -171,6 +179,7 @@ export default function WardrobeScreen({navigation}) {
         </View>
       ) : (
         <FlatList
+          key="wardrobe-grid"
           data={filtered}
           renderItem={renderCard}
           keyExtractor={item => item.id}
@@ -178,12 +187,12 @@ export default function WardrobeScreen({navigation}) {
           contentContainerStyle={{
               paddingHorizontal: spacing.md,
               paddingBottom: spacing.sumo,
-              flexGrow: 0,
-              justifyContent: 'flex-start',
+              // justifyContent: 'flex-start',
+              // flexGrow: Platform.OS === 'web' ? 1 : 0,
             }}
           columnWrapperStyle={styles.row}
           showsVerticalScrollIndicator={false}
-          style={{flex: 0, marginTop: spacing.md,}}
+          style={{ marginTop: spacing.md, flex: Platform.OS === 'web' ? 1 : 0}}
 
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -193,14 +202,14 @@ export default function WardrobeScreen({navigation}) {
           }
         />
       )}
-    </SafeAreaView>
+    </Container>
   )
 }
 
 
 
 const styles = StyleSheet.create({
-  safe: { flex: 0, backgroundColor: colors.backgroundColor, justifyContent: 'flex-start', height: 'auto' },
+  safe: { flex: 1, backgroundColor: colors.background, justifyContent: 'flex-start', ...(Platform.OS !== 'web' && {height: 'auto'}), },
   title: {
     fontSize: 28,
     fontWeight: '400',

@@ -1,6 +1,6 @@
 import React,{useState,useEffect,useCallback, useRef} from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import {ScrollView,StyleSheet,View,Text,TouchableOpacity,ActivityIndicator,Alert} from 'react-native';
+import {ScrollView,StyleSheet,View,Text,TouchableOpacity,ActivityIndicator,Alert, Platform} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import SocialPostCard from '../../components/SocialPostCard';
 import {supabase} from '../../backend/supabase-client'; 
